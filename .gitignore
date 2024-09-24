@@ -1,25 +1,55 @@
-# macOS
-._*
+# OSX
+# =========================
+
 .DS_Store
+.AppleDouble
 .LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear on external disk
+.Spotlight-V100
+.Trashes
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
 # Icon must end with two carriage returns (\r)
 Icon
 
 # Windows
+# =========================
+
 [Dd]esktop.ini
+
+# Thumbnails
 ehthumbs.db
 ehthumbs_vista.db
 [Tt]humbs.db
 
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows shortcuts
+*.lnk
+
 # Backups
+# =========================
 *.bak
 
 # Logs
+# =========================
 *.log
 log/
 logs/
 
 # Temporary
+# =========================
 *~
 *.tmp
 *.temp
@@ -27,6 +57,7 @@ tmp/
 temp/
 
 # Vim
+# =========================
 .netrwhist
 [._]*.s[a-v][a-z]
 [._]*.sw[a-p]
