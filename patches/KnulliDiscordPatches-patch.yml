@@ -1,4 +1,5 @@
 - title: "RG40XX H/V Joystick Fix by @Gamma"
+  patch_id: gamma_joystick_fix_g40xx-boot-modded
   description: >
     Please be aware that you could break your system if something
     goes wrong. Be careful and mind the risk of having to start over
@@ -35,6 +36,7 @@
       - "dd if=/tmp/patch/rg40xx-boot-modded.img of=/dev/mmcblk0p1"
 
 - title: "RG35XX H Joystick Fix by @Gamma"
+  patch_id: gamma_joystick_fix_g35xx-h-boot-modded
   description: >
     Please be aware that you could break your system if something
     goes wrong. Be careful and mind the risk of having to start over
@@ -69,6 +71,7 @@
       - "dd if=/tmp/patch/rg35xx-h-boot-modded.img of=/dev/mmcblk0p1"
 
 - title: "RG40XX H/V LED scripts v12 by @chrizzo"
+  patch_id: chizzo_joystick_led_support_v12
   description: >
     And here's v12 of the RG40XX H/V LED scripts (containing code by @Gamma, @Mikhailzrick, and @dopaz).
 
@@ -120,6 +123,7 @@
       - "/userdata/system/ledservice_installer.sh"
 
 - title: "RG40XX H/V LED scripts v13 by @chrizzo"
+  patch_id: chizzo_joystick_led_support_v13
   description: >
     And here's v13 of the RG40XX H/V LED scripts (containing code by @Gamma, @Mikhailzrick, and @dopaz).
 
