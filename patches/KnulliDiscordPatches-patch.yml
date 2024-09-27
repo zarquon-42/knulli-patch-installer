@@ -1,0 +1,165 @@
+- title: "RG40XX H/V Joystick Fix by @Gamma"
+  description: >
+    Please be aware that you could break your system if something
+    goes wrong. Be careful and mind the risk of having to start over
+    with your Knulli setup before you proceed.  You could also just
+    wait for the next Knulli release which will most likely come
+    with patch applied.
+
+    This post is for the RG40XX H. (Although it also works with the
+    RG40XX V.)
+
+    Download the boot image for your device (`rg40xx-boot-modded.img)
+    from this post by @acmeplus here: https://discord.com/channels/1173228527605272666/1227424831360733305/1269846256403087444
+
+    This patch is based on the instructions originally created by
+    @dopaz here: https://discord.com/channels/1173228527605272666/1227424831360733305/1269734942934433943
+
+    This will copy the boot image to your device to /tmp/patch
+
+    dd if=/tmp/patch/rg40xx-boot-modded.img of=/dev/mmcblk0p1
+    
+    Then reboots the system
+
+    For more info see: https://discord.com/channels/1173228527605272666/1261038054773227680/1283889420113678377
+
+  boards: 
+    - rg40xx
+
+  tasks:
+    - files:
+      - source: "https://github.com/zarquon-42/knulli-patches/raw/refs/heads/main/patches/rg40xx-boot-modded.img"
+        destination: "/tmp/patch/"
+    
+    - commands:
+      - "dd if=/tmp/patch/rg40xx-boot-modded.img of=/dev/mmcblk0p1"
+
+- title: "RG35XX H Joystick Fix by @Gamma"
+  description: >
+    Please be aware that you could break your system if something
+    goes wrong. Be careful and mind the risk of having to start over
+    with your Knulli setup before you proceed.  You could also just
+    wait for the next Knulli release which will most likely come
+    with patch applied.
+
+    This post is for the RG35XX H.
+
+    Download the boot image for your device (`rg35xx-h-boot-modded.img)
+    from this post by @acmeplus here: https://discord.com/channels/1173228527605272666/1227424831360733305/1269846256403087444
+
+    This patch is based on the instructions originally created by
+    @dopaz here: https://discord.com/channels/1173228527605272666/1227424831360733305/1269734942934433943
+
+    This will copy the boot image to your device to /tmp/patch
+
+    dd if=/tmp/patch/rg35xx-h-boot-modded.img of=/dev/mmcblk0p1
+    
+    Then reboots the system
+
+
+  boards: 
+    - rg35xx-h
+
+  tasks:
+    - files:
+      - source: "https://github.com/zarquon-42/knulli-patches/raw/refs/heads/main/patches/rg35xx-h-boot-modded.img"
+        destination: "/tmp/patch/"
+    
+    - commands:
+      - "dd if=/tmp/patch/rg35xx-h-boot-modded.img of=/dev/mmcblk0p1"
+
+- title: "RG40XX H/V LED scripts v12 by @chrizzo"
+  description: >
+    And here's v12 of the RG40XX H/V LED scripts (containing code by @Gamma, @Mikhailzrick, and @dopaz).
+
+    This version adapts LED brightness to screen brightness with led.brightness corresponding to 100% screen brightness.
+
+    LED service can be disabled via System Settings -> Services -> Analog_Stick_LED
+
+    Customize in batocera.conf like so:
+
+    led.mode=1
+
+    led.brightness=100
+
+    led.speed=15
+
+    led.colour=148 255 0
+
+    Allowed modes are 0-6 (off, solid, fast breathe, medium breathe, slow breathe, rainbow, rainbow swirl), allowed min/max values for everything else are 0/1-255. By default, led.colour applies to both sticks (RG40XX H). You can optionally use led.colour.right to override the color of the right stick.
+
+    Changes will be applied automatically once you save batocera.conf while the service is running.
+
+    While battery charges the stick breathes green
+    When battery charge reaches 20%-6%, the sticks breathes yellow
+    When battery charge reaches 5% or less, the sticks breathes red
+    When battery charge is above 20%, the sticks turn back to whatever is customized in batocera.conf
+
+    Also, this has a very simple interface for other developers to temporarily override batocera.conf settings, setting a solid color with user-configured brightness by calling
+    /usr/bin/analog_stick_led_daemon.sh set 255 255 255
+
+    or return to batocera.conf settings by calling
+    /usr/bin/analog_stick_led_daemon.sh import
+    
+  boards: 
+    - rg40xx
+
+  tasks:
+    - files:
+      - source: "https://github.com/zarquon-42/knulli-patches/raw/refs/heads/main/patches/rg40xx-h-stick-leds-v12-installer.zip"
+        destination: "/userdata/system"
+    
+    - extract:
+        - source: "/userdata/system/rg40xx-h-stick-leds-v12-installer.zip"
+          destination: "/userdata/system/"  # Different extraction path
+
+    - executable:
+        - path: "/userdata/system/ledservice_installer.sh"
+    
+    - commands:
+      - "/userdata/system/ledservice_installer.sh"
+
+- title: "RG40XX H/V LED scripts v13 by @chrizzo"
+  description: >
+    And here's v13 of the RG40XX H/V LED scripts (containing code by @Gamma, @Mikhailzrick, and @dopaz).
+
+    This version adapts LED brightness to screen brightness with led.brightness corresponding to 100% screen brightness.
+
+    LED service can be disabled via System Settings -> Services -> Analog_Stick_LED
+
+    Customize in batocera.conf like so:
+
+    led.mode=1
+
+    led.brightness=100
+
+    led.speed=15
+
+    led.colour=148 255 0
+
+    Allowed modes are 0-6 (off, solid, fast breathe, medium breathe, slow breathe, rainbow, rainbow swirl), allowed min/max values for everything else are 0/1-255. By default, led.colour applies to both sticks (RG40XX H). You can optionally use led.colour.right to override the color of the right stick.
+
+    Changes will be applied automatically once you save batocera.conf while the service is running.
+
+    While battery charges the stick breathes green
+    When battery charge reaches 20%-6%, the sticks breathes yellow
+    When battery charge reaches 5% or less, the sticks breathes red
+    When battery charge is above 20%, the sticks turn back to whatever is customized in batocera.conf
+
+  boards: 
+    - rg40xx
+
+  tasks:
+    - files:
+      - source: "https://github.com/zarquon-42/knulli-patches/raw/refs/heads/main/patches/rg40xx-h-stick-leds-v13-installer.zip"
+        destination: "/userdata/system"
+    
+    - extract:
+        - source: "/userdata/system/rg40xx-h-stick-leds-v13-installer.zip"
+          destination: "/userdata/system/"  # Different extraction path
+
+    - executable:
+        - path: "/userdata/system/ledservice_installer.sh"
+    
+    - commands:
+      - "/userdata/system/ledservice_installer.sh"
