@@ -1,0 +1,674 @@
+#!/usr/bin/env python
+
+import argparse
+import logging
+import pygame
+import sys
+import os
+#import shutil
+import subprocess
+import re
+import yaml
+import requests
+import socket
+import zipfile
+
+# Constants for colors
+BLACK = (0, 0, 0)
+LIGHT_GREY = (150, 150, 150)
+WHITE = (255, 255, 255)
+HIGHLIGHT_COLOR = (68, 138, 255)
+
+# Constants for screen layout
+TITLE_HEIGHT = 40
+INSTRUCTIONS_HEIGHT = 40
+FONT_SIZE = 28
+PADDING = 10
+BORDER = 2
+
+# Initialize Pygame
+pygame.init()
+
+info = pygame.display.Info()
+screen_width = info.current_w if info.current_w else 640
+screen_height = info.current_h if info.current_h else 480
+
+# Create a screen with size
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Patch Installer")
+
+# Fonts
+normal_font = pygame.font.SysFont(None, FONT_SIZE)
+instruction_font = pygame.font.SysFont(None, 24)
+title_font = pygame.font.SysFont(None, 48)
+
+# Default log file path
+DEFAULT_LOG_FILE = '/userdata/system/logs/patch-installer.log'
+# Check if the directory for the default log file exists
+if not os.path.exists(os.path.dirname(DEFAULT_LOG_FILE)):
+    DEFAULT_LOG_FILE = './patch-installer.log'
+
+def initialize_logging(log_file, log_level=2):
+    log_levels = {
+        0: logging.CRITICAL,
+        1: logging.WARNING,
+        2: logging.INFO,
+        3: logging.DEBUG
+    }
+
+    # Setup logging
+    logging.basicConfig(
+        filename=log_file,
+        filemode='a',  # Append to the file
+        level=log_levels[log_level],
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # Also output to console at the same level
+    console = logging.StreamHandler()
+    console.setLevel(log_levels[log_level])
+    logging.getLogger().addHandler(console)
+
+    logging.debug(f"Log initialized at level: {log_levels[log_level]}")
+    logging.debug(f"Logging to file: {args.log_file}")
+
+def is_network_available(host="8.8.8.8", port=53, timeout=3):
+    """
+    Checks if the network is available by attempting to create a connection to a public DNS server.
+    
+    :param host: The host to connect to (default is Google's public DNS server).
+    :param port: The port to use (default is 53, the DNS port).
+    :param timeout: Timeout for the connection in seconds.
+    :return: True if the network is available, False otherwise.
+    """
+    try:
+        # Attempt to create a connection to the host with the given port and timeout
+        socket.create_connection((host, port), timeout=timeout)
+        return True
+    except OSError as e:
+        logging.debug(f"Network check failed: {e}")
+        return False
+    except:
+        logging.warning(f"Unhandled exception during network check: {e=}, {type(e)=}")
+        return False
+
+
+# Detect board type
+def detect_board():
+    try:
+        result = subprocess.run(
+            ["bash", "-c", "batocera-info | grep '^Board: ' | sed -e 's/^Board: //' | tr '[:upper:]' '[:lower:]'"],
+            capture_output=True, text=True, check=True
+        )
+        board = result.stdout.strip()
+        logging.debug(f"Detected board: {board}")
+        return board
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to detect board type: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"Error occurred retrieving board type {e=}, {type(e)=}")
+        return None
+
+# Check if a patch is compatible with the detected board (with regex and specific boards)
+def is_patch_compatible(patch, board):
+    compatibility = patch.get('compatibility', {})
+    compatible_boards = compatibility.get('boards', [])
+
+    # Return True if no boards are defined (no constraints on compatibility)
+    if not compatible_boards:
+        return True
+
+    # Check each entry in boards (either a direct match or regex)
+    if board:
+        for entry in compatible_boards:
+            if entry == board or re.match(entry, board):
+                return True
+
+    logging.info(f"Skipping {patch['title']} - incompatible with {board} board")
+    return False
+
+# List files from a GitHub repository
+def list_github_files(repo, path):
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+
+    logging.getLogger('urllib3').setLevel(logging.ERROR)
+
+    files = []
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an error for bad responses
+
+        for item in response.json():
+            if item['type'] == 'file':
+                files.append((item['download_url'], item['path'], 'false'))  # Default executable to false
+            elif item['type'] == 'dir':
+                # Recursive call for directories
+                sub_files = list_github_files(repo, f"{path}/{item['name']}")
+                files.extend(sub_files)
+    except Exception as e:
+        logging.critical(f"Error occurred listing github files for {url} {e=}, {type(e)=}")
+    
+    return files
+
+# Download files from a GitHub repository
+def download_github_files(repo, path, destination_path, ignore, dry_run=False):
+    # Create destination directory if it doesn't exist
+    if not dry_run: os.makedirs(destination_path, exist_ok=True)
+
+    # Get the list of files from the GitHub repo
+    file_list = list_github_files(repo, path)
+
+    # Separate ignore and include patterns
+    ignore_patterns = []
+    include_patterns = []
+    patterns = ignore.split('|') if ignore else []
+    for pattern in patterns:
+        if pattern.startswith('!'):
+            include_patterns.append(pattern[1:])  # Remove leading '!'
+        else:
+            ignore_patterns.append(pattern)
+
+    # Process each file
+    for url, file_path, executable in file_list:
+        ignore_file = any(re.match(p, file_path) for p in ignore_patterns)
+        include_file = any(re.match(p, file_path) for p in include_patterns)
+
+        if ignore_file and not include_file:
+            logging.debug(f"Skipping ignored file: {file_path}")
+            continue
+
+        destination_file = os.path.join(destination_path, file_path)
+        if not dry_run: os.makedirs(os.path.dirname(destination_file), exist_ok=True)  # Create dir if needed
+
+        logging.info(f"Downloading {file_path} to {destination_file}")
+        logging.getLogger('urllib3').setLevel(logging.WARNING)
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an error for bad responses
+
+        # Save the file
+        if not dry_run:
+            with open(destination_file, 'wb') as f:
+                f.write(response.content)
+
+            if executable == "true":
+                os.chmod(destination_file, 0o755)  # Make executable
+
+# Function to extract ZIP files
+def extract_zip(zip_path, dest_path, dry_run=False):
+    if dry_run:
+        logging.info(f"Extract ZIP: {zip_path} to {dest_path}")
+        return
+
+    if zipfile.is_zipfile(zip_path):
+        # TODO: Make sure destination file exists
+        logging.info(f"Extract ZIP: {zip_path} to {dest_path}")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(dest_path)
+        os.remove(zip_path)  # Remove the zip file after extraction
+    else:
+        logging.info(f"Invalid ZIP: {zip_path}")
+
+# Function to download or copy/move files
+def download_file(source, destination, move=False, dry_run=False):
+    # Check if the source is a URL (assumed if it starts with 'http')
+    if source.startswith('http'):
+        if not is_network_available():
+            logging.warning(f"No Network: Unable to download {source}")
+            return False
+
+        # Handle downloading from a remote URL
+        logging.info(f"Downloading from {source} to {destination}")
+        if not dry_run:
+            os.makedirs(destination, exist_ok=True)
+        file_name = os.path.join(destination, os.path.basename(source))
+        
+        # Download the file
+        logging.getLogger('urllib3').setLevel(logging.WARNING)
+        response = requests.get(source, stream=True)
+        if response.status_code == 200:
+            if not dry_run:
+                with open(file_name, 'wb') as file:
+                    shutil.copyfileobj(response.raw, file)
+            logging.debug(f"Downloaded: {file_name}")
+        else:
+            logging.warning(f"Failed to download {source}, status code: {response.status_code}")
+            return False
+    else:
+        # Handle local file copying or moving
+        if os.path.isfile(source):
+            if move:
+                logging.info(f"Moving local file {source} to {destination}")
+                if not dry_run: shutil.move(source, destination)
+            else:
+                logging.info(f"Copying local file {source} to {destination}")
+                if not dry_run: shutil.copy(source, destination)
+        else:
+            logging.error(f"Invalid YAML file: Source file missing {source}")
+            return False
+
+    return True
+                
+# Function to mark files as executable
+def make_executable(file_path, dry_run=False):
+    logging.info(f"Making {file_path} executable")
+    if not dry_run:
+        os.chmod(file_path, 0o755)
+
+# Process a specific patch
+def process_patch(patch, board, validate_yaml_only=False, dry_run=False):
+    if patch['title']:
+        if not validate_yaml_only:
+            logging.info(f"Processing patch: {patch['title']}")
+    else:
+        logging.error(f"Invalid YAML file: Missing Title")
+        return False
+
+    if not is_patch_compatible(patch, board) and not validate_yaml_only:
+        return  # Skip incompatible patches
+
+    # Process tasks in the order they appear
+    for task in patch['tasks']:
+        
+        # Handle downloads
+        if 'files' in task:
+            for file in task['files']:
+                if file['source'] and file['destination']:
+                    if 'github.com' in file['source']:
+                        if not is_network_available():
+                            result_msg = f"No Network: Unable to download {file['source']}"
+                            logging.warning(result_msg)
+                            return False, result_msg
+                        
+                        repo_url = file['source'].replace("https://github.com/", "").rstrip('/')
+                        path = file.get('path', "")
+                        ignore = file.get('ignore', "")
+                        if validate_yaml_only and not download_github_files(repo_url, path, file['destination'], ignore, dry_run=True):
+                            return False, "Github Validate Failed"
+                        else:
+                            download_github_files(repo_url, path, file['destination'], ignore, dry_run=dry_run)
+                    else:
+                        if validate_yaml_only and not download_file(file['source'], file['destination'], move=file.get('move', False), dry_run=True):
+                            return False, "Download Validation Failed"
+                        else:
+                            download_file(file['source'], file['destination'], move=file.get('move', False), dry_run=dry_run)        
+                else:
+                    result_msg = f"Invalid YAML file: Files missing source or destination"
+                    logging.error(result_msg)
+                    return False, result_msg
+
+        # Handle extraction
+        if 'extract' in task:
+            for file in task['extract']:
+                if file['source'] and file['destination']:
+                    if not validate_yaml_only:
+                        extract_zip(file['source'], file['destination'], dry_run)
+                else:
+                    result_msg = f"Invalid YAML file: Extract missing source or destination"
+                    logging.error(result_msg)
+                    return False, result_msg
+
+        # Handle marking files as executable
+        if 'executable' in task:
+            for file in task['executable']:
+                if file['path']:
+                    if not validate_yaml_only:
+                        make_executable(file['path'], dry_run)
+                else:
+                    result_msg = f"Invalid YAML file: Executable missing path"
+                    logging.error(result_msg)
+                    return False, result_msg
+        # Handle launch commands
+        if 'commands' in task and not validate_yaml_only:
+            for command in task['commands']:
+                logging.info(f"Executing command: {command}")
+                if not dry_run: subprocess.run(command, shell=True)
+
+    result_msg = f"Patch Validation Complete" if validate_yaml_only else f"Patch Installation Complete" 
+    return True, result_msg
+
+# Process patches based on the YAML file
+def process_patches(patch_file, patch_id=None, dry_run=False):
+    logging.info(f"Processing Patch File: {patch_file}")
+    board = detect_board()
+
+    return_message = ''
+    # Load the YAML file
+    if os.path.isfile(patch_file):
+        with open(patch_file, 'r') as file:
+            patches = yaml.safe_load(file)
+    else:
+        result_msg = f"Patch file does not exist ({patch_file})"
+        return_message = f"{return_message}\n{result_msg}"
+        logging.critical(result_msg)
+        return False, return_message
+
+    if patch_id:
+        patch = next((p for p in patches if p.get('id') == patch_id), None)
+        if patch:
+            result, result_msg = process_patch(patch, board, dry_run=dry_run)
+            return_message = f"{return_message}\n{result_msg}"
+        else:
+            result_msg = f"No patch found with ID: {patch_id}"
+            return_message = f"{return_message}\n{result_msg}"
+            logging.error(result_msg)
+            return False, result_msg
+    else:
+        for patch in patches:
+            result, result_msg = process_patch(patch, board, dry_run=dry_run)
+            return_message = f"{return_message}\n{result_msg}"
+
+    return result, return_message
+
+def validate_patch_file(patch_file):
+    logging.debug(f"Validating patch file: {patch_file}")
+    board = detect_board()
+
+    # Load the YAML file
+    if os.path.isfile(patch_file):
+        try:
+            with open(patch_file, 'r') as file:
+                patches = yaml.safe_load(file)
+        except Exception as e:
+            logging.critical(f"Error occurred loading Patch file ({patch_file}) {e=}, {type(e)=}")
+            return False
+
+        try:
+            for patch in patches:
+                if not process_patch(patch, board, True, True):
+                    return False
+        except Exception as e:
+            logging.critical(f"Error occurred validating Patch file ({patch_file}) {e=}, {type(e)=}")
+            return False
+    else:
+        logging.critical(f"Patch file does not exist ({patch_file})")
+        return False
+
+    return True
+
+def list_patches(directory, full_check=False):
+    """
+    Checks all YAML files (.yml, .yaml) in a given directory for validity.
+    
+    :param directory: The directory containing patch files.
+    :param full_check: Boolean, if True, perform a full validity check.
+    :return: A list of dictionaries containing filename, patch title, patch ID, and validity status.
+    """
+    patches_info = []
+    
+    if full_check:
+        board = detect_board()
+    else:
+        board = None
+
+    # Look for .yml and .yaml files in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith(('.yml', '.yaml')):
+            file_path = os.path.join(directory, filename)
+            logging.debug(f"Checking {file_path}")
+
+            try:
+                with open(file_path, 'r') as file:
+                    patches = yaml.safe_load(file)
+                    
+                    # Check if the YAML contains a title (if not, skip the file)
+
+                    for patch in patches:
+                        if 'title' not in patch:
+                            logging.debug(f"No Title")
+                            continue
+                        # Extract title and patch ID
+                        patch_title = patch.get('title', 'Unknown Title')
+                        patch_id = patch.get('id', None)
+                        description = patch.get('description', 'Description not available.')
+
+                        # Perform a full check if requested
+                        is_valid = True
+                        if full_check:
+                            is_valid = process_patch(patch, board, validate_yaml_only=True, dry_run=True)
+
+                        # Append the result for this file
+                        patches_info.append({
+                            'filename': filename,
+                            'file_path': file_path,
+                            'title': patch_title,
+                            'patch_id': patch_id,
+                            'description': description,
+                            'is_valid': is_valid
+                        })
+            except yaml.YAMLError as e:
+                logging.error(f"YAML error in file {filename}: {e}")
+                patches_info.append({
+                    'filename': filename,
+                    'file_path': file_path,
+                    'title': 'Invalid YAML Syntax',
+                    'patch_id': None,
+                    'description': 'Description not available.',
+                    'is_valid': False
+                })
+
+    return patches_info
+
+def draw_text(text, font, color, surface, x, y):
+    """Helper function to render text on the screen."""
+    text_obj = font.render(text, True, color)
+    surface.blit(text_obj, (x, y))
+
+# Function to wrap text based on available width
+def wrap_text(text, font, max_width, cut_off=False):
+    paragraphs = text.split('\n')
+    lines = []
+
+    for paragraph in paragraphs:
+        current_line = ''
+        words = paragraph.split(' ')
+        for word in words:
+            prev_test_line = current_line
+            test_line = f"{current_line} {word}".strip()
+            # Check if current line fits within max width
+            if font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                if cut_off:
+                    current_line = f"{prev_test_line} "
+                    for char in word:
+                        test_line = f"{current_line}{char}"
+                        if font.size(f"{test_line}...")[0] <= max_width:
+                            current_line = test_line
+                        else:
+                            return f"{current_line.strip()}..."
+                else:
+                    lines.append(current_line)
+                    current_line = word
+
+        if cut_off:
+            return current_line
+        else:
+            if current_line:  # Add last line if not empty
+                lines.append(current_line)
+
+        lines.append('')
+
+    return lines
+
+def main_menu():
+    # Load patches
+    patch_list = list_patches('patches/', False)
+    logging.debug(f"{patch_list}")
+
+    selected_patch = 0
+    run = True
+    installing_patch = False
+
+    while run:
+        screen.fill(BLACK)
+        
+        # Top bar with app title
+        title_text = normal_font.render("Patch Installer", True, WHITE)
+        pygame.draw.rect(screen, HIGHLIGHT_COLOR, pygame.Rect(0, 0, screen_width, title_font.get_height()))
+        screen.blit(title_text, (screen_width // 2 - title_text.get_width() // 2, PADDING))
+
+        # Bottom bar with instructions
+        draw_text("Press A to install, B to exit, Arrows to navigate", instruction_font, HIGHLIGHT_COLOR, screen, PADDING, screen_height - INSTRUCTIONS_HEIGHT)
+
+        # Handle user input
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_b:  # Exit confirmation
+                    run = not show_dialog("Are you sure you want to exit?")
+                    if not run:
+                        pygame.quit()
+                        sys.exit()
+
+                elif event.key == pygame.K_DOWN:
+                    selected_patch = (selected_patch + 1) % len(patch_list)
+                elif event.key == pygame.K_UP:
+                    selected_patch = (selected_patch - 1) % len(patch_list)
+                elif event.key == pygame.K_a:  # Confirm installation
+                    installing_patch = confirm_install(patch_list[selected_patch])
+
+        # Display patch list on the left half of the screen
+        patch_list_height = screen_height - TITLE_HEIGHT - INSTRUCTIONS_HEIGHT - PADDING
+        patch_list_rect = pygame.Rect(PADDING, TITLE_HEIGHT + PADDING, screen_width // 2 - PADDING * 2, patch_list_height)
+
+        # Display selected patch description on the right side
+        description_rect = pygame.Rect(screen_width // 2 + PADDING, TITLE_HEIGHT + PADDING, screen_width // 2 - PADDING * 2, patch_list_height)
+        
+        pygame.draw.rect(screen, HIGHLIGHT_COLOR, pygame.Rect(patch_list_rect.x - PADDING, patch_list_rect.y - PADDING * 2, patch_list_rect.width + PADDING * 2, patch_list_rect.height), BORDER)
+        pygame.draw.rect(screen, HIGHLIGHT_COLOR, pygame.Rect(description_rect.x - PADDING, description_rect.y - PADDING * 2, description_rect.width + PADDING * 2, description_rect.height), BORDER)
+        
+        # Render patch list
+        for i, patch in enumerate(patch_list):
+            color = LIGHT_GREY
+            if i == selected_patch:
+                color = BLACK
+                pygame.draw.rect(screen, LIGHT_GREY, pygame.Rect(patch_list_rect.x, patch_list_rect.y + i * FONT_SIZE - PADDING // 2, screen_width // 2 - PADDING * 2, FONT_SIZE))
+            list_title = wrap_text(patch['title'], normal_font, patch_list_rect.width - PADDING - BORDER * 2, True)
+            draw_text(list_title, normal_font, color, screen, patch_list_rect.x + PADDING, patch_list_rect.y + i * FONT_SIZE + 2)
+
+        # Wrap and render selected patch description
+        selected_patch_description = f"{patch_list[selected_patch].get('title')}\n{patch_list[selected_patch].get('description', 'No description available.')}"
+        wrapped_description = wrap_text(selected_patch_description, normal_font, description_rect.width - PADDING)
+
+        # Render the wrapped text in the description area
+        drawing_title = True
+        for i, line in enumerate(wrapped_description):
+            if line == '': drawing_title = False
+            draw_text(line, normal_font, WHITE if drawing_title else LIGHT_GREY, screen, description_rect.x + PADDING, description_rect.y + i * FONT_SIZE)
+
+        # Update the screen
+        pygame.display.flip()
+
+        # If the user confirms installation, handle it
+        if installing_patch:
+            screen.fill(BLACK)
+            message_text = normal_font.render('Installing Patch', True, WHITE)
+            screen.blit(message_text, (screen_width // 2 - title_text.get_width() // 2, (screen_height - FONT_SIZE) // 2))
+            pygame.display.flip()
+            
+            patch_to_install = patch_list[selected_patch]
+
+            result, result_msg = process_patches(patch_to_install['file_path'], patch_id=patch_to_install['patch_id'], dry_run=True)
+            if not result:
+                logging.info(f"Patch failed: {result_msg}")
+                result_msg = f"Patch Install Failed: {result_msg}"
+            else:
+                run = True
+
+            show_dialog(result_msg, continue_only=True)
+
+            installing_patch = False
+
+    pygame.quit()
+    sys.exit()
+
+def show_dialog(dialog_msg, prompt_msg = None, continue_only = False):
+    """Displays a confirmation dialog for exiting."""
+    wrapped_message = wrap_text(dialog_msg, normal_font, screen_width - 40)  # Wrap text to fit screen screen_width
+
+    total_lines = 0
+    total_height = 0
+    for i, line in enumerate(wrapped_message):
+        total_height = total_height + normal_font.render(line, True, WHITE).get_height()
+        total_lines = total_lines + 1
+    total_height = total_height + normal_font.render(line, True, WHITE).get_height()*2
+    total_lines = total_lines + 2
+
+    while True:
+        screen.fill(BLACK)
+        for i, line in enumerate(wrapped_message):
+            message_text = normal_font.render(line, True, WHITE)
+            screen.blit(message_text, (screen_width // 2 - message_text.get_width() // 2, (screen_height - total_height) // 2 + i * message_text.get_height()))
+
+        if not prompt_msg:
+            if continue_only:
+                prompt_msg = "Press A to continue"
+            else:
+                prompt_msg = "Press A to confirm, B to cancel"
+
+        prompt_text = normal_font.render(prompt_msg, True, HIGHLIGHT_COLOR)
+        screen.blit(prompt_text, (screen_width // 2 - prompt_text.get_width() // 2, (screen_height - total_height)  // 2 + total_lines * message_text.get_height()))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                logging.debug(f"Quitting without confirmation")
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                logging.debug(f"Key pressed: {pygame.key.name(event.key)}")
+                if event.key == pygame.K_a:  # Confirm exit
+                    logging.debug(f"Confirm Selected")
+                    #pygame.quit()
+                    #sys.exit()
+                    return True
+                elif event.key == pygame.K_b:  # Cancel exit
+                    logging.debug(f"Confirm Canceled")
+                    return False
+
+def confirm_install(patch):
+    """Displays a confirmation dialog for patch installation."""
+    # Display a confirmation dialog, and return True if confirmed
+    # (For now, automatically return True to simulate confirmation)
+    msg = f"Are you sure you want to install the \"{patch['title']}\" patch?"
+    return show_dialog(msg)
+
+# Argument parsing
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Patch Installer Tool")
+    
+    parser.add_argument('patch_file', metavar='<Patch File>', help="Path to the patch YAML or JSON file.", nargs='?')
+    parser.add_argument('--patch-id', help="Specify the patch ID if the file contains more than one patch.")
+    parser.add_argument('--dry-run', action='store_true', help="Perform a dry run without actually applying the patch.")
+    parser.add_argument('-q', '--quiet', action='count', default=0, help="Decrease logging verbosity. Can be used multiple times.")
+    parser.add_argument('-v', '--verbose', action='count', default=0, help="Increase logging verbosity. Can be used multiple times.")
+    parser.add_argument('--log-file', default=DEFAULT_LOG_FILE, help=f"Specify the log file. Default: {DEFAULT_LOG_FILE}")
+
+    return parser.parse_args()
+
+# Example usage
+if __name__ == '__main__':
+    args = parse_arguments()
+
+    args.dry_run=True # TODO: Remove this once testing is complete.
+
+    # Default log level is 2 (INFO)
+    # Adjust log level based on -q (quiet) and -v (verbose)
+    log_level = max(0, min(3, 3 if args.dry_run else 2 + args.verbose - args.quiet))
+    initialize_logging(args.log_file, log_level)
+
+     # Process patches with optional patch ID and dry run
+    if args.patch_file:
+        logging.info(f"Installing Patch: {args.patch_file}")
+        if validate_patch_file(args.patch_file):
+            process_patches(args.patch_file, args.patch_id, dry_run=args.dry_run)
+        else:
+            logging.critical(f"Patch Error: There is a problem, check the YAML file before retrying.")
+            exit(1)
+    else:
+        logging.info(f"Starting Patch Installer...")
+        main_menu()
