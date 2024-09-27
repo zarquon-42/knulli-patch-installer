@@ -1,0 +1,26 @@
+- title: "High-Resolution Texture Pack"
+  description: "Enhances the game with 4K textures."
+  compatibility:
+    boards: 
+      - rk3326
+      - odroidgo2
+      - "rk[0-9]{4}"   # Regex pattern example: any rkxxxx boards
+    min_version: "5.27"
+
+  tasks:
+    - files:
+        - source: "https://github.com/username/repository"
+          path: "/textures/"
+          destination: "/game/patches/"
+          ignore: "*.md|!README.md"
+
+    - extract:
+        - source: "/game/patches/patch.zip"
+          destination: "/game/patches/extracted/"  # Different extraction path
+
+    - executable:
+        - path: "/game/scripts/texture_patch.sh"
+    
+    - commands:
+        - "/game/launch --apply-patch"
+        - "/game/update-textures"

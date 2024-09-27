@@ -1,0 +1,16 @@
+- title: "Local Patch Test"
+  id: "patch1"
+  description: "Installs local files"
+  compatible_boards:
+    boards:
+      - "odroid-go"
+      - "raspberry-pi-.*"
+  tasks:
+    - files:
+      - source: "./local/file1.txt"
+        destination: "/userdata/system/file1.txt"
+      - source: "./local/file2.sh"
+        destination: "/userdata/system/file2.sh"
+        executable: true
+    - commands:
+      - "bash /userdata/system/file2.sh"

@@ -1,0 +1,18 @@
+- title: "Remote File and Zip Test"
+  id: "patch2"
+  description: "Downloads a remote file and extracts a zip"
+  compatible_boards:
+    boards:
+      - "rockchip"
+  tasks:
+    - files:
+        - source: "https://example.com/patch/remote-file.txt"
+          destination: "/userdata/system/remote-file.txt"
+        - source: "https://example.com/patch/archive.zip"
+          destination: "/userdata/system/archive.zip"
+    - extract:
+        - source: "/userdata/system/archive.zip"
+          destination: "/userdata/system/extracted/"
+          overwrite: true
+    - commands:
+        - "/userdata/system/extracted/run_this_script.sh"

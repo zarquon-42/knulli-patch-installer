@@ -1,0 +1,33 @@
+- title: "Multiple Patch - Local Files"
+  id: "patch1"
+  description: "Installs some local files"
+  compatible_boards:
+    boards:
+      - "odroid-go"
+  tasks:
+    - files:
+      - source: "./local/patch1_file1.txt"
+        destination: "/userdata/system/patch1_file1.txt"
+      - source: "./local/patch1_file2.sh"
+        destination: "/userdata/system/patch1_file2.sh"
+        executable: true
+    - commands:
+      - "bash /userdata/system/patch1_file2.sh"
+
+- title: "Multiple Patch - Remote Files"
+  id: "patch2"
+  description: "Downloads remote files and runs them"
+  compatible_boards:
+    boards:
+      - "raspberry-pi-4"
+  tasks:
+    - files:
+      - source: "https://example.com/patch2/remote-file.txt"
+        destination: "/userdata/system/patch2_remote-file.txt"
+      - source: "https://example.com/patch2/archive.zip"
+        destination: "/userdata/system/patch2_archive.zip"
+        extract:
+          destination: "/userdata/system/patch2_extracted/"
+          overwrite: true
+    - commands:
+      - "/userdata/system/patch2_extracted/run.sh"

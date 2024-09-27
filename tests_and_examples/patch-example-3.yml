@@ -1,0 +1,15 @@
+- id: "patch3"
+  title: "GitHub Download Test"
+  description: "Downloads files from a GitHub repository"
+  compatible_boards:
+    boards:
+      - "x86_64"
+  tasks:
+    - files:
+      - source: "https://github.com/zarquon-42/knulli-bootlogos"
+        destination: "/userdata/system/patches"
+        github:
+          path: "bootlogo"
+          ignore: "*.md|install.sh|!important.md"
+    - commands:
+        - "/userdata/system/patches/start.sh"
