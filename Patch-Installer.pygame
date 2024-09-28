@@ -8,7 +8,7 @@ import logging
 import pygame
 import sys
 import os
-#import shutil
+import shutil
 import subprocess
 import re
 import yaml
