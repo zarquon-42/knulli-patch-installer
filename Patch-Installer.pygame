@@ -29,35 +29,12 @@ FONT_SIZE = 28
 PADDING = 10
 BORDER = 2
 
-interactive_mode=True
-
 PATCH_DIR='/userdata/system/patches'
 if not os.path.exists(os.path.dirname(PATCH_DIR)):
     if os.path.isfile('.gitignore'):
         PATCH_DIR='/tmp/patches'
     else:
         PATCH_DIR=os.path.abspath('./patches')
-
-# Initialize Pygame
-pygame.init()
-
-info = pygame.display.Info()
-
-if os.path.isdir('/userdata/system'):
-    screen_width = info.current_w if info.current_w else 640
-    screen_height = info.current_h if info.current_h else 480
-else:
-    screen_width = 640
-    screen_height = 480
-
-# Create a screen with size
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Patch Installer")
-
-# Fonts
-normal_font = pygame.font.SysFont(None, FONT_SIZE)
-instruction_font = pygame.font.SysFont(None, 24)
-title_font = pygame.font.SysFont(None, 48)
 
 # Default log file path
 DEFAULT_LOG_FILE = '/userdata/system/logs/patch-installer.log'
@@ -225,7 +202,7 @@ def download_github_files(repo, path, destination_path, ignore, dry_run=False):
                 os.chmod(destination_file, 0o755)  # Make executable
 
 def download_patch_files(message='Download patch definition files?', dry_run=False):
-    if (not interactive_mode) or show_dialog(message):
+    if (not g_interactive_mode) or show_dialog(message):
         show_message("Downloading patch definition files...")
         logging.debug(f"Downloading to {os.path.dirname(PATCH_DIR)}/patches")
         download_github_files('zarquon-42/knulli-patch-installer', 'patches', os.path.dirname(PATCH_DIR), ".*|!.*\.yml|.*\.yaml", dry_run)
@@ -597,13 +574,13 @@ def draw_list(list, list_rect, cursor_item, selection_list=True, lock_top=False)
                 color = LIGHT_GREY
                 if i == cursor_item and selection_list:
                     color = BLACK
-                    pygame.draw.rect(screen, LIGHT_GREY, pygame.Rect(list_rect.x, list_rect.y + (i - list_offset) * FONT_SIZE - PADDING // 2, screen_width // 2 - PADDING * 2, FONT_SIZE))
+                    pygame.draw.rect(g_screen, LIGHT_GREY, pygame.Rect(list_rect.x, list_rect.y + (i - list_offset) * FONT_SIZE - PADDING // 2, g_screen_width // 2 - PADDING * 2, FONT_SIZE))
 
             if selection_list:
-                list_line = wrap_text(list_item, normal_font, list_rect.width - PADDING - BORDER * 2, True)
+                list_line = wrap_text(list_item, g_normal_font, list_rect.width - PADDING - BORDER * 2, True)
             else:
                 list_line = list_item
-            draw_text(list_line, normal_font, color, screen, list_rect.x + PADDING, list_rect.y + (i - list_offset) * FONT_SIZE + 2)
+            draw_text(list_line, g_normal_font, color, g_screen, list_rect.x + PADDING, list_rect.y + (i - list_offset) * FONT_SIZE + 2)
 
 def main_menu(log_level=2, dry_run=True):
     selected_patch = 0
@@ -624,12 +601,12 @@ def main_menu(log_level=2, dry_run=True):
             run = False
 
     while run:
-        screen.fill(BLACK)
+        g_screen.fill(BLACK)
         
         # Top bar with app title
-        title_text = normal_font.render("Patch Installer", True, WHITE)
-        pygame.draw.rect(screen, HIGHLIGHT_COLOR, pygame.Rect(0, 0, screen_width, title_font.get_height()))
-        screen.blit(title_text, (screen_width // 2 - title_text.get_width() // 2, PADDING))
+        title_text = g_normal_font.render("Patch Installer", True, WHITE)
+        pygame.draw.rect(g_screen, HIGHLIGHT_COLOR, pygame.Rect(0, 0, g_screen_width, g_title_font.get_height()))
+        g_screen.blit(title_text, (g_screen_width // 2 - title_text.get_width() // 2, PADDING))
 
         if dry_run:
             dry_run_instruction = '                      [ Dry Run Mode On ]'
@@ -637,17 +614,17 @@ def main_menu(log_level=2, dry_run=True):
             dry_run_instruction = ''
 
         # Bottom bar with instructions
-        draw_text(f"Press A to install, B to exit, Arrows to navigate{dry_run_instruction}", instruction_font, HIGHLIGHT_COLOR, screen, PADDING, screen_height - INSTRUCTIONS_HEIGHT)
+        draw_text(f"Press A to install, B to exit, Arrows to navigate{dry_run_instruction}", g_instruction_font, HIGHLIGHT_COLOR, g_screen, PADDING, g_screen_height - INSTRUCTIONS_HEIGHT)
 
 
         # Display patch list on the left half of the screen
-        patch_list_height = screen_height - TITLE_HEIGHT - INSTRUCTIONS_HEIGHT - PADDING
-        patch_list_rect = pygame.Rect(PADDING, TITLE_HEIGHT + PADDING, screen_width // 2 - PADDING * 2, patch_list_height)
+        patch_list_height = g_screen_height - TITLE_HEIGHT - INSTRUCTIONS_HEIGHT - PADDING
+        patch_list_rect = pygame.Rect(PADDING, TITLE_HEIGHT + PADDING, g_screen_width // 2 - PADDING * 2, patch_list_height)
 
         # Display selected patch description on the right side
-        description_rect = pygame.Rect(screen_width // 2 + PADDING, TITLE_HEIGHT + PADDING, screen_width // 2 - PADDING * 2, patch_list_height)
+        description_rect = pygame.Rect(g_screen_width // 2 + PADDING, TITLE_HEIGHT + PADDING, g_screen_width // 2 - PADDING * 2, patch_list_height)
         selected_patch_description = f"{patch_list[selected_patch].get('title')}\n{patch_list[selected_patch].get('description', 'No description available.')}"
-        description_lines = wrap_text(selected_patch_description, normal_font, description_rect.width - PADDING)
+        description_lines = wrap_text(selected_patch_description, g_normal_font, description_rect.width - PADDING)
         max_description_display_lines = ((description_rect.height - PADDING // 2) // FONT_SIZE)
 
         # Handle user input
@@ -691,8 +668,8 @@ def main_menu(log_level=2, dry_run=True):
                 else:
                     logging.debug(f"Key pressed: {pygame.key.name(event.key)}")
 
-        pygame.draw.rect(screen, WHITE if current_list == 0 else HIGHLIGHT_COLOR, pygame.Rect(patch_list_rect.x - PADDING, patch_list_rect.y - PADDING * 2, patch_list_rect.width + PADDING * 2, patch_list_rect.height), BORDER)
-        pygame.draw.rect(screen, WHITE if current_list == 1 else HIGHLIGHT_COLOR, pygame.Rect(description_rect.x - PADDING, description_rect.y - PADDING * 2, description_rect.width + PADDING * 2, description_rect.height), BORDER)
+        pygame.draw.rect(g_screen, WHITE if current_list == 0 else HIGHLIGHT_COLOR, pygame.Rect(patch_list_rect.x - PADDING, patch_list_rect.y - PADDING * 2, patch_list_rect.width + PADDING * 2, patch_list_rect.height), BORDER)
+        pygame.draw.rect(g_screen, WHITE if current_list == 1 else HIGHLIGHT_COLOR, pygame.Rect(description_rect.x - PADDING, description_rect.y - PADDING * 2, description_rect.width + PADDING * 2, description_rect.height), BORDER)
         
         patch_titles = []
         for patch in patch_list:
@@ -726,29 +703,29 @@ def main_menu(log_level=2, dry_run=True):
 
 def show_message(message):
     logging.info(message)
-    if interactive_mode:
-        screen.fill(BLACK)
-        message_text = normal_font.render(message, True, WHITE)
-        screen.blit(message_text, (screen_width // 2 - message_text.get_width() // 2, (screen_height - FONT_SIZE) // 2))
+    if g_interactive_mode:
+        g_screen.fill(BLACK)
+        message_text = g_normal_font.render(message, True, WHITE)
+        g_screen.blit(message_text, (g_screen_width // 2 - message_text.get_width() // 2, (g_screen_height - FONT_SIZE) // 2))
         pygame.display.flip()
 
 def show_dialog(dialog_msg, prompt_msg = None, continue_only = False):
     """Displays a confirmation dialog for exiting."""
-    wrapped_message = wrap_text(dialog_msg, normal_font, screen_width * 0.80)  # Wrap text to fit screen screen_width
+    wrapped_message = wrap_text(dialog_msg, g_normal_font, g_screen_width * 0.80)  # Wrap text to fit screen g_screen_width
 
     total_lines = 0
     total_height = 0
     for i, line in enumerate(wrapped_message):
-        total_height = total_height + normal_font.render(line, True, WHITE).get_height()
+        total_height = total_height + g_normal_font.render(line, True, WHITE).get_height()
         total_lines = total_lines + 1
-    total_height = total_height + normal_font.render(line, True, WHITE).get_height()*2
+    total_height = total_height + g_normal_font.render(line, True, WHITE).get_height()*2
     total_lines = total_lines + 2
 
     while True:
-        screen.fill(BLACK)
+        g_screen.fill(BLACK)
         for i, line in enumerate(wrapped_message):
-            message_text = normal_font.render(line, True, WHITE)
-            screen.blit(message_text, (screen_width // 2 - message_text.get_width() // 2, (screen_height - total_height) // 2 + i * message_text.get_height()))
+            message_text = g_normal_font.render(line, True, WHITE)
+            g_screen.blit(message_text, (g_screen_width // 2 - message_text.get_width() // 2, (g_screen_height - total_height) // 2 + i * message_text.get_height()))
 
         if not prompt_msg:
             if continue_only:
@@ -756,8 +733,8 @@ def show_dialog(dialog_msg, prompt_msg = None, continue_only = False):
             else:
                 prompt_msg = "Press A to confirm, B to cancel"
 
-        prompt_text = normal_font.render(prompt_msg, True, HIGHLIGHT_COLOR)
-        screen.blit(prompt_text, (screen_width // 2 - prompt_text.get_width() // 2, (screen_height - total_height)  // 2 + total_lines * message_text.get_height()))
+        prompt_text = g_normal_font.render(prompt_msg, True, HIGHLIGHT_COLOR)
+        g_screen.blit(prompt_text, (g_screen_width // 2 - prompt_text.get_width() // 2, (g_screen_height - total_height)  // 2 + total_lines * message_text.get_height()))
 
         pygame.display.flip()
 
@@ -809,7 +786,7 @@ if __name__ == '__main__':
 
      # Process patches with optional patch ID and dry run
     if args.patch_file:
-        interactive_mode = False
+        g_interactive_mode = False
 
         logging.info(f"Installing Patch: {args.patch_file}")
         if validate_patch_file(args.patch_file):
@@ -818,5 +795,28 @@ if __name__ == '__main__':
             logging.critical(f"Patch Error: There is a problem, check the YAML file before retrying.")
             exit(1)
     else:
+        g_interactive_mode=True
+
+        # Initialize Pygame
+        pygame.init()
+
+        display_info = pygame.display.Info()
+
+        if os.path.isdir('/userdata/system'):
+            g_screen_width = display_info.current_w if display_info.current_w else 640
+            g_screen_height = display_info.current_h if display_info.current_h else 480
+        else:
+            g_screen_width = 640
+            g_screen_height = 480
+
+        # Create a screen with size
+        g_screen = pygame.display.set_mode((g_screen_width, g_screen_height))
+        pygame.display.set_caption("Patch Installer")
+
+        # Fonts
+        g_normal_font = pygame.font.SysFont(None, FONT_SIZE)
+        g_instruction_font = pygame.font.SysFont(None, 24)
+        g_title_font = pygame.font.SysFont(None, 48)
+
         logging.info(f"Starting Patch Installer...")
         main_menu(log_level, args.dry_run)
