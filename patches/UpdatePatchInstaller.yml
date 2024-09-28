@@ -6,3 +6,6 @@
     - files:
       - source: "https://raw.githubusercontent.com/zarquon-42/knulli-patch-installer/refs/heads/main/Patch-Installer.pygame"
         destination: "./"
+
+    - alert:
+      - "You will need to restart the Patch Installer for changes to take effect."
