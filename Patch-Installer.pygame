@@ -36,7 +36,7 @@ if not os.path.exists(os.path.dirname(PATCH_DIR)):
     if os.path.isfile('.gitignore'):
         PATCH_DIR='/tmp/patches'
     else:
-        PATCH_DIR='./patches'
+        PATCH_DIR=os.path.abspath('./patches')
 
 # Initialize Pygame
 pygame.init()
@@ -63,7 +63,7 @@ title_font = pygame.font.SysFont(None, 48)
 DEFAULT_LOG_FILE = '/userdata/system/logs/patch-installer.log'
 # Check if the directory for the default log file exists
 if not os.path.exists(os.path.dirname(DEFAULT_LOG_FILE)):
-    DEFAULT_LOG_FILE = './patch-installer.log'
+    DEFAULT_LOG_FILE = os.path.abspath('./patch-installer.log')
 
 log_levels = {
     0: logging.CRITICAL,
@@ -224,10 +224,10 @@ def download_github_files(repo, path, destination_path, ignore, dry_run=False):
             if executable == "true":
                 os.chmod(destination_file, 0o755)  # Make executable
 
-def download_patch_files(message='Download patch files?', dry_run=False):
+def download_patch_files(message='Download patch definition files?', dry_run=False):
     if (not interactive_mode) or show_dialog(message):
-        logging.debug(f"PATCH_DIR={PATCH_DIR}")
-        logging.debug(f"Downloading Patch files to {os.path.dirname(PATCH_DIR)}/patches")
+        show_message("Downloading patch definition files...")
+        logging.debug(f"Downloading to {os.path.dirname(PATCH_DIR)}/patches")
         download_github_files('zarquon-42/knulli-patch-installer', 'patches', os.path.dirname(PATCH_DIR), ".*|!.*\.yml|.*\.yaml", dry_run)
 
 # Function to extract ZIP files
@@ -466,12 +466,12 @@ def list_patches(directory, full_check=False, compatibility_check=True, skip_inv
     """
     Checks all YAML files (.yml, .yaml) in a given directory for validity.
     
-    :param directory: The directory containing patch files.
+    :param directory: The directory containing patch definition files.
     :param full_check: Boolean, if True, perform a full validity check.
     :return: A list of dictionaries containing filename, patch title, patch ID, and validity status.
     """
 
-    show_message('Loading Patch Definitions...')
+    show_message('Loading patch definition files...')
 
     patches_info = []
     
@@ -616,8 +616,8 @@ def main_menu(log_level=2, dry_run=True):
     # Load patches
     patch_list = list_patches(PATCH_DIR, False, skip_invalid=skip_invalid)
     if len(patch_list) == 0:
-        logging.warning(f"No Patch files found at {PATCH_DIR}")
-        download_patch_files(f"No Patch files found.\n\nConfirm if you wish to download available patch files?")
+        logging.warning(f"No patch definition files found at {PATCH_DIR}")
+        download_patch_files(f"No patch definition files found.\n\nConfirm if you wish to download available files?")
         patch_list = list_patches(PATCH_DIR, False, skip_invalid=skip_invalid)
         if len(patch_list) == 0:
             show_dialog("No patches available. Existing", continue_only=True)
@@ -683,7 +683,7 @@ def main_menu(log_level=2, dry_run=True):
                     logging.info(f"Log Level: {log_level}")
                     logging.getLogger().setLevel(logging.DEBUG)
                     logging.debug("Turned on debug logging")
-                elif event.key == pygame.K_y:  # Reload patch files
+                elif event.key == pygame.K_y:  # Reload patch definition files
                     download_patch_files()
                     patch_list = list_patches(PATCH_DIR, False, skip_invalid=skip_invalid)
                 elif event.key == pygame.K_a:  # Confirm installation
