@@ -1,0 +1,33 @@
+- title: "Bootlogo Changer App"
+  id: bootlogo_changer_app_install_patch
+  description: >
+    This is a utility you can use to update your Knulli bootlogo's
+
+    This contains some bootlogo images not created by me.  Some of
+    the images were modified by me but the base image was created
+    by others.
+
+    All credit goes to the creators.
+
+    * powered_by_knulli series - @Ishtar
+    * Original bootlogo - Knulli team - https://knulli.org
+    * rg35xx-h_anbernic - u/YamInevitable8154/
+    * rg35xx-h_device - u/ericthepear
+
+  tasks:
+    - files:
+      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-bootlogos/refs/heads/main/Change-Bootlogo.pygame"
+        destination: "/userdata/roms/pygame/change-bootlogo/"
+        executable: true
+      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-bootlogos/refs/heads/main/change-bootlogo.sh"
+        destination: "/opt/"
+        executable: true
+
+      - source: "https://github.com/zarquon-42/knulli-bootlogos"
+        destination: "/userdata/system/patches"
+        github:
+          path: "bootlogo"
+          ignore: "*.md|install.sh|.gitignore|!important.md"
+
+    - commands:
+        - "mv /opt/change-bootlogo.sh /opt/change-bootlogo"

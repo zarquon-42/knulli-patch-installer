@@ -1,0 +1,51 @@
+- title: "Per Game LED Settings Install"
+  id: per_game_led_settings_install_patch
+  description: >
+    This patch leverages the LED Daemon from @chrizzo to set the analog
+    joystick LED on the Anbernic RG40XX series devices on a per game bases
+    within Knulli (https://knulli.org/).
+
+    Usage
+
+    The `led_game_colour.sh` script is triggered on a games launch and looks
+    for an `.led` file within the `/userdata/roms/<system>/led` folder.  The
+    `.led` file will match the rom file name and contains a RGB tuple which
+    is then passed on to LED Daemon.  Obviously this service needs to be
+    active.
+
+    The script automatically creates missing `.led` files based in the artwork.
+    If no artwork exists the files will need to be manually created. You can
+    manually create the files.
+
+    If the automatically created colour is not desired you can manually edit
+    the `.led` file.
+
+  tasks:
+    - files:
+      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-led-per-game/refs/heads/main/generate_game_colour.py"
+        destination: "/opt/"
+        executable: true
+      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-led-per-game/refs/heads/main/led_game_colour.sh"
+        destination: "/userdata/system/scripts/"
+        executable: true
+
+    - commands:
+        - "batocera-save-overlay >/dev/null"
+
+- title: "Per Game LED Settings Uninstall"
+  id: per_game_led_settings_uninstall_patch
+  description: "This patch uninstalls the Bootlogo Changer App"
+
+  tasks:
+    - files:
+      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-led-per-game/refs/heads/main/generate_game_colour.py"
+        destination: "/opt/"
+        executable: true
+      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-led-per-game/refs/heads/main/led_game_colour.sh"
+        destination: "/userdata/system/scripts/"
+        executable: true
+
+    - commands:
+        - "rm /userdata/system/scripts/led_game_colour.sh"
+        - "rm /opt/generate_game_colour.py"
+        - "batocera-save-overlay >/dev/null"
