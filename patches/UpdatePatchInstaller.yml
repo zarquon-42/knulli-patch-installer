@@ -1,0 +1,8 @@
+- title: "Update Patch Installer"
+  id: patch_install_update
+  description: "This allows you to update the Patch Installer to the latest version in github."
+
+  tasks:
+    - files:
+      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-patch-installer/refs/heads/main/Patch-Installer.pygame"
+        destination: "./"
