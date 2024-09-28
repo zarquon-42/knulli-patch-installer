@@ -190,12 +190,17 @@ def download_github_files(repo, path, destination_path, ignore, dry_run=False):
     # Separate ignore and include patterns
     ignore_patterns = []
     include_patterns = []
+    logging.debug(f"ignore={ignore}")
     patterns = ignore.split('|') if ignore else []
+    logging.debug(f"patterns={patterns}")
     for pattern in patterns:
         if pattern.startswith('!'):
             include_patterns.append(pattern[1:])  # Remove leading '!'
         else:
             ignore_patterns.append(pattern)
+
+    logging.debug(f"ignore_patterns={ignore_patterns}")
+    logging.debug(f"include_patterns={include_patterns}")
 
     # Process each file
     for url, file_path, executable in file_list:
@@ -320,8 +325,9 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interac
                             return False, result_msg
                         
                         repo_url = file['source'].replace("https://github.com/", "").rstrip('/')
-                        path = file.get('path', "")
+                        path = file.get('github_path', "")
                         ignore = file.get('ignore', "")
+                        logging.debug(f"file={file}")
                         if validate_yaml_only and not download_github_files(repo_url, path, file['destination'], ignore, dry_run=True):
                             return False, "Github Validate Failed"
                         else:

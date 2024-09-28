@@ -25,9 +25,8 @@
 
       - source: "https://github.com/zarquon-42/knulli-bootlogos"
         destination: "/userdata/system/patches"
-        github:
-          path: "bootlogo"
-          ignore: ".*.md|install.sh|.gitignore|!important.md"
+        github_path: "bootlogo"
+        ignore: ".*.md|install.sh|.gitignore|!important.md"
 
     - commands:
         - "mv /opt/change-bootlogo.sh /opt/change-bootlogo"
