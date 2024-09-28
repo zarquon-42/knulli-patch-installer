@@ -358,7 +358,7 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interac
 
         if 'alert' in task:
             for alert_message in task['alert']:
-                if  interactive_mode:
+                if interactive_mode:
                     logging.debug(f"Displaying Alert: {alert_message}")
                     show_dialog(alert_message, continue_only=True)
                 else:
@@ -470,6 +470,9 @@ def list_patches(directory, full_check=False, compatibility_check=True, skip_inv
     :param full_check: Boolean, if True, perform a full validity check.
     :return: A list of dictionaries containing filename, patch title, patch ID, and validity status.
     """
+
+    show_message('Loading Patch Definitions...')
+
     patches_info = []
     
     board = detect_board()
@@ -688,8 +691,6 @@ def main_menu(log_level=2, dry_run=True):
                 else:
                     logging.debug(f"Key pressed: {pygame.key.name(event.key)}")
 
-
-        
         pygame.draw.rect(screen, WHITE if current_list == 0 else HIGHLIGHT_COLOR, pygame.Rect(patch_list_rect.x - PADDING, patch_list_rect.y - PADDING * 2, patch_list_rect.width + PADDING * 2, patch_list_rect.height), BORDER)
         pygame.draw.rect(screen, WHITE if current_list == 1 else HIGHLIGHT_COLOR, pygame.Rect(description_rect.x - PADDING, description_rect.y - PADDING * 2, description_rect.width + PADDING * 2, description_rect.height), BORDER)
         
@@ -700,23 +701,12 @@ def main_menu(log_level=2, dry_run=True):
         draw_list(patch_titles, patch_list_rect, selected_patch, True)
         draw_list(description_lines, description_rect, description_pos, False, True)
 
-        '''
-        # Render the wrapped text in the description area
-        drawing_title = True
-        for i, line in enumerate(description_lines):
-            if line == '': drawing_title = False
-            draw_text(line, normal_font, WHITE if drawing_title else LIGHT_GREY, screen, description_rect.x + PADDING, description_rect.y + i * FONT_SIZE)
-        '''
-
         # Update the screen
         pygame.display.flip()
 
         # If the user confirms installation, handle it
         if installing_patch:
-            screen.fill(BLACK)
-            message_text = normal_font.render('Installing Patch', True, WHITE)
-            screen.blit(message_text, (screen_width // 2 - title_text.get_width() // 2, (screen_height - FONT_SIZE) // 2))
-            pygame.display.flip()
+            show_message('Installing Patch...')
             
             patch_to_install = patch_list[selected_patch]
 
@@ -734,9 +724,17 @@ def main_menu(log_level=2, dry_run=True):
     pygame.quit()
     sys.exit()
 
+def show_message(message):
+    logging.info(message)
+    if interactive_mode:
+        screen.fill(BLACK)
+        message_text = normal_font.render(message, True, WHITE)
+        screen.blit(message_text, (screen_width // 2 - message_text.get_width() // 2, (screen_height - FONT_SIZE) // 2))
+        pygame.display.flip()
+
 def show_dialog(dialog_msg, prompt_msg = None, continue_only = False):
     """Displays a confirmation dialog for exiting."""
-    wrapped_message = wrap_text(dialog_msg, normal_font, screen_width - 40)  # Wrap text to fit screen screen_width
+    wrapped_message = wrap_text(dialog_msg, normal_font, screen_width * 0.80)  # Wrap text to fit screen screen_width
 
     total_lines = 0
     total_height = 0
