@@ -33,7 +33,33 @@ in development:
 
 ## CLI Usage
 
-This can also be used as a CLI by making the file executable
-with `chmod +x /userdata/roms/pygame/Patch_installer.pygame`
-then run it from with `/userdata/roms/pygame/Patch_installer.pygame --help`
-to get usage information.
+This can also be used as a CLI by making the file executable with:
+
+```bash
+chmod +x /userdata/roms/pygame/Patch_installer.pygame
+```
+
+Then run it from with:
+
+```bash
+/userdata/roms/pygame/Patch_installer.pygame --help
+```
+
+This will display usage:
+
+```sh
+usage: Patch-Installer.pygame [-h] [--patch-id PATCH_ID] [--dry-run] [-q] [-v] [--log-file LOG_FILE] [<Patch File>]
+
+Patch Installer Tool
+
+positional arguments:
+  <Patch File>         Path to the patch YAML or JSON file.
+
+options:
+  -h, --help           show this help message and exit
+  --patch-id PATCH_ID  Specify the patch ID if the file contains more than one patch.
+  --dry-run            Perform a dry run without actually applying the patch.
+  -q, --quiet          Decrease logging verbosity. Can be used multiple times.
+  -v, --verbose        Increase logging verbosity. Can be used multiple times.
+  --log-file LOG_FILE  Specify the log file. Default: /userdata/system/logs/patch-installer.log
+```
