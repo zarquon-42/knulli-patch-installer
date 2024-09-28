@@ -17,10 +17,13 @@ import socket
 import zipfile
 
 # Constants for colors
-BLACK = (0, 0, 0)
-LIGHT_GREY = (150, 150, 150)
-WHITE = (255, 255, 255)
+BACKGROUND_COLOR = (0, 0, 0)
+NORMAL_TEXT_COLOR = (150, 150, 150)
 HIGHLIGHT_COLOR = (68, 138, 255)
+TITLE_TEXT_COLOR = (255, 255, 255)
+TITLE_BG_COLOR = HIGHLIGHT_COLOR
+SELECTION_BG_COLOR = NORMAL_TEXT_COLOR
+SELECTION_TEXT_COLOR = BACKGROUND_COLOR
 
 # Constants for screen layout
 TITLE_HEIGHT = 40
@@ -569,12 +572,12 @@ def draw_list(list, list_rect, cursor_item, selection_list=True, lock_top=False)
     for i, list_item in enumerate(list):
         if list_offset <= i and (i - list_offset) < max_list_display_count:
             if i == 0 and not selection_list:
-                color = WHITE
+                color = TITLE_TEXT_COLOR
             else:
-                color = LIGHT_GREY
+                color = NORMAL_TEXT_COLOR
                 if i == cursor_item and selection_list:
-                    color = BLACK
-                    pygame.draw.rect(g_screen, LIGHT_GREY, pygame.Rect(list_rect.x, list_rect.y + (i - list_offset) * FONT_SIZE - PADDING // 2, g_screen_width // 2 - PADDING * 2, FONT_SIZE))
+                    color = SELECTION_TEXT_COLOR
+                    pygame.draw.rect(g_screen, SELECTION_BG_COLOR, pygame.Rect(list_rect.x, list_rect.y + (i - list_offset) * FONT_SIZE - PADDING // 2, g_screen_width // 2 - PADDING * 2, FONT_SIZE))
 
             if selection_list:
                 list_line = wrap_text(list_item, g_normal_font, list_rect.width - PADDING - BORDER * 2, True)
@@ -601,11 +604,11 @@ def main_menu(log_level=2, dry_run=True):
             run = False
 
     while run:
-        g_screen.fill(BLACK)
+        g_screen.fill(BACKGROUND_COLOR)
         
         # Top bar with app title
-        title_text = g_normal_font.render("Patch Installer", True, WHITE)
-        pygame.draw.rect(g_screen, HIGHLIGHT_COLOR, pygame.Rect(0, 0, g_screen_width, g_title_font.get_height()))
+        title_text = g_normal_font.render("Patch Installer", True, TITLE_TEXT_COLOR)
+        pygame.draw.rect(g_screen, TITLE_BG_COLOR, pygame.Rect(0, 0, g_screen_width, g_title_font.get_height()))
         g_screen.blit(title_text, (g_screen_width // 2 - title_text.get_width() // 2, PADDING))
 
         if dry_run:
@@ -668,8 +671,8 @@ def main_menu(log_level=2, dry_run=True):
                 else:
                     logging.debug(f"Key pressed: {pygame.key.name(event.key)}")
 
-        pygame.draw.rect(g_screen, WHITE if current_list == 0 else HIGHLIGHT_COLOR, pygame.Rect(patch_list_rect.x - PADDING, patch_list_rect.y - PADDING * 2, patch_list_rect.width + PADDING * 2, patch_list_rect.height), BORDER)
-        pygame.draw.rect(g_screen, WHITE if current_list == 1 else HIGHLIGHT_COLOR, pygame.Rect(description_rect.x - PADDING, description_rect.y - PADDING * 2, description_rect.width + PADDING * 2, description_rect.height), BORDER)
+        pygame.draw.rect(g_screen, TITLE_TEXT_COLOR if current_list == 0 else TITLE_BG_COLOR, pygame.Rect(patch_list_rect.x - PADDING, patch_list_rect.y - PADDING * 2, patch_list_rect.width + PADDING * 2, patch_list_rect.height), BORDER)
+        pygame.draw.rect(g_screen, TITLE_TEXT_COLOR if current_list == 1 else TITLE_BG_COLOR, pygame.Rect(description_rect.x - PADDING, description_rect.y - PADDING * 2, description_rect.width + PADDING * 2, description_rect.height), BORDER)
         
         patch_titles = []
         for patch in patch_list:
@@ -704,8 +707,8 @@ def main_menu(log_level=2, dry_run=True):
 def show_message(message):
     logging.info(message)
     if g_interactive_mode:
-        g_screen.fill(BLACK)
-        message_text = g_normal_font.render(message, True, WHITE)
+        g_screen.fill(BACKGROUND_COLOR)
+        message_text = g_normal_font.render(message, True, TITLE_TEXT_COLOR)
         g_screen.blit(message_text, (g_screen_width // 2 - message_text.get_width() // 2, (g_screen_height - FONT_SIZE) // 2))
         pygame.display.flip()
 
@@ -716,15 +719,15 @@ def show_dialog(dialog_msg, prompt_msg = None, continue_only = False):
     total_lines = 0
     total_height = 0
     for i, line in enumerate(wrapped_message):
-        total_height = total_height + g_normal_font.render(line, True, WHITE).get_height()
+        total_height = total_height + g_normal_font.render(line, True, TITLE_TEXT_COLOR).get_height()
         total_lines = total_lines + 1
-    total_height = total_height + g_normal_font.render(line, True, WHITE).get_height()*2
+    total_height = total_height + g_normal_font.render(line, True, TITLE_TEXT_COLOR).get_height()*2
     total_lines = total_lines + 2
 
     while True:
-        g_screen.fill(BLACK)
+        g_screen.fill(BACKGROUND_COLOR)
         for i, line in enumerate(wrapped_message):
-            message_text = g_normal_font.render(line, True, WHITE)
+            message_text = g_normal_font.render(line, True, TITLE_TEXT_COLOR)
             g_screen.blit(message_text, (g_screen_width // 2 - message_text.get_width() // 2, (g_screen_height - total_height) // 2 + i * message_text.get_height()))
 
         if not prompt_msg:
