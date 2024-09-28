@@ -25,7 +25,7 @@
     For more info see: https://discord.com/channels/1173228527605272666/1261038054773227680/1283889420113678377
 
   boards: 
-    - rg40xx
+    - "rg40xx"
 
   tasks:
     - files:
@@ -66,7 +66,7 @@
 
 
   boards: 
-    - rg35xx-h
+    - "rg35xx-h"
 
   tasks:
     - files:
@@ -116,7 +116,7 @@
     /usr/bin/analog_stick_led_daemon.sh import
     
   boards: 
-    - rg40xx
+    - "rg40xx"
 
   tasks:
     - files:
@@ -165,7 +165,7 @@
     When battery charge is above 20%, the sticks turn back to whatever is customized in batocera.conf
 
   boards: 
-    - rg40xx
+    - "rg40xx"
 
   tasks:
     - files:
