@@ -6,8 +6,18 @@ deploy patches in knulli.
 ## Setup Instructions
 
 This is in Alpha but if you wish to test simply copy the
-Patch-Installer.pygame file to you roms/pygame folder and
-run it from within Knulli after updating the Games List.
+`Patch-Installer.pygame` file to you `roms/pygame` folder
+and run it from within the pygame section of Knulli after
+updating the Games List.
+
+Alternatively, you could `SSH` into the device and then
+enter the commands:
+
+```bash
+cd /userdata/roms/pygame
+wget https://raw.githubusercontent.com/zarquon-42/knulli-patch-installer/refs/heads/main/Patch-Installer.pygame
+
+```
 
 The first time you run the app it will will ask you to
 download some patch definition files.  If you do not wish
