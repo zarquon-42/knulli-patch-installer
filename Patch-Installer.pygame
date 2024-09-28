@@ -150,7 +150,7 @@ def is_patch_compatible(patch, board):
     if board:
         for entry in compatible_boards:
             if entry == board or re.match(entry, board):
-                logging.debug(f"Board Check: Board ({board}) matches patch compatibility information ({entry})")
+                logging.debug(f"Board Check: Patch {patch['title']}: Board ({board}) matches patch compatibility information ({entry})")
                 return True
 
     logging.info(f"Skipping {patch['title']} - incompatible with {board} board")
@@ -231,33 +231,37 @@ def download_patch_files(message='Download patch files?', dry_run=False):
         download_github_files('zarquon-42/knulli-patch-installer', 'patches', os.path.dirname(PATCH_DIR), ".*|!.*\.yml|.*\.yaml", dry_run)
 
 # Function to extract ZIP files
-def extract_zip(zip_path, dest_path, dry_run=False):
+def extract_zip(zip_path, destination_path, dry_run=False):
+    destination_path = os.path.abspath(destination_path)
+
     if dry_run:
-        logging.info(f"Extract ZIP: {zip_path} to {dest_path}")
+        logging.info(f"Extract ZIP: {zip_path} to {destination_path}")
         return
 
     if zipfile.is_zipfile(zip_path):
         # TODO: Make sure destination file exists
-        logging.info(f"Extract ZIP: {zip_path} to {dest_path}")
+        logging.info(f"Extract ZIP: {zip_path} to {destination_path}")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(dest_path)
+            zip_ref.extractall(destination_path)
         os.remove(zip_path)  # Remove the zip file after extraction
     else:
         logging.info(f"Invalid ZIP: {zip_path}")
 
 # Function to download or copy/move files
-def download_file(source, destination, move=False, dry_run=False):
+def download_file(source, destination_path, move=False, dry_run=False):
     # Check if the source is a URL (assumed if it starts with 'http')
+    destination_path = os.path.abspath(destination_path)
+
     if source.startswith('http'):
         if not is_network_available():
             logging.warning(f"No Network: Unable to download {source}")
             return False
 
         # Handle downloading from a remote URL
-        logging.info(f"Downloading from {source} to {destination}")
+        logging.info(f"Downloading from {source} to {destination_path}")
         if not dry_run:
-            os.makedirs(destination, exist_ok=True)
-        file_name = os.path.join(destination, os.path.basename(source))
+            os.makedirs(destination_path, exist_ok=True)
+        file_name = os.path.join(destination_path, os.path.basename(source))
         
         # Download the file
         logging.getLogger('urllib3').setLevel(logging.WARNING)
@@ -275,11 +279,11 @@ def download_file(source, destination, move=False, dry_run=False):
         # Handle local file copying or moving
         if os.path.isfile(source):
             if move:
-                logging.info(f"Moving local file {source} to {destination}")
-                if not dry_run: shutil.move(source, destination)
+                logging.info(f"Moving local file {source} to {destination_path}")
+                if not dry_run: shutil.move(source, destination_path)
             else:
-                logging.info(f"Copying local file {source} to {destination}")
-                if not dry_run: shutil.copy(source, destination)
+                logging.info(f"Copying local file {source} to {destination_path}")
+                if not dry_run: shutil.copy(source, destination_path)
         else:
             logging.error(f"Invalid YAML file: Source file missing {source}")
             return False
@@ -288,6 +292,8 @@ def download_file(source, destination, move=False, dry_run=False):
                 
 # Function to mark files as executable
 def make_executable(file_path, dry_run=False):
+    file_path = os.path.abspath(file_path)
+
     logging.info(f"Making {file_path} executable")
     if not dry_run:
         os.chmod(file_path, 0o755)
