@@ -27,7 +27,7 @@
         destination: "/userdata/system/patches"
         github:
           path: "bootlogo"
-          ignore: ".*\.md|install\.sh|\.gitignore|!important\.md"
+          ignore: ".*.md|install.sh|.gitignore|!important.md"
 
     - commands:
         - "mv /opt/change-bootlogo.sh /opt/change-bootlogo"
