@@ -37,7 +37,7 @@
 
 - title: "Per Game LED Settings Uninstall"
   id: per_game_led_settings_uninstall_patch
-  description: "This patch uninstalls the Bootlogo Changer App"
+  description: "This patch uninstalls the Per Game LED Settings patch."
 
   boards: 
     - "rg40xx"
