@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+# TODO: Fix compatibility check.  Desired behavior: Do not display incompatible patches unless an override flag. If an incompatible patch is selected a warning dialog should be presented.
+
+# TODO: Reload base Patch YML files from internet
+# TODO: If no Patch YML files found Prompt to download from internet
+# 
+# Future TODO: Add options menu, can be used to toggle dry-run and log_level.
+# Future TODO: Add support in tasks for confirmations on tasks which will display a message and prompt for the "A" key to continue or b to cancel..
+
 import argparse
 import logging
 import pygame
@@ -26,6 +34,8 @@ FONT_SIZE = 28
 PADDING = 10
 BORDER = 2
 
+interactive_mode=True
+
 # Initialize Pygame
 pygame.init()
 
@@ -48,14 +58,14 @@ DEFAULT_LOG_FILE = '/userdata/system/logs/patch-installer.log'
 if not os.path.exists(os.path.dirname(DEFAULT_LOG_FILE)):
     DEFAULT_LOG_FILE = './patch-installer.log'
 
-def initialize_logging(log_file, log_level=2):
-    log_levels = {
-        0: logging.CRITICAL,
-        1: logging.WARNING,
-        2: logging.INFO,
-        3: logging.DEBUG
-    }
+log_levels = {
+    0: logging.CRITICAL,
+    1: logging.WARNING,
+    2: logging.INFO,
+    3: logging.DEBUG
+}
 
+def initialize_logging(log_file, log_level=2):
     # Setup logging
     logging.basicConfig(
         filename=log_file,
@@ -72,6 +82,9 @@ def initialize_logging(log_file, log_level=2):
 
     logging.debug(f"Log initialized at level: {log_levels[log_level]}")
     logging.debug(f"Logging to file: {args.log_file}")
+
+def adjust_logging(log_level=2):
+    logging.setLevel(log_levels[log_level])
 
 def is_network_available(host="8.8.8.8", port=53, timeout=3):
     """
@@ -230,7 +243,8 @@ def download_file(source, destination, move=False, dry_run=False):
         if response.status_code == 200:
             if not dry_run:
                 with open(file_name, 'wb') as file:
-                    shutil.copyfileobj(response.raw, file)
+                    for chunk in response.iter_content(chunk_size=128):
+                        file.write(chunk)
             logging.debug(f"Downloaded: {file_name}")
         else:
             logging.warning(f"Failed to download {source}, status code: {response.status_code}")
@@ -257,7 +271,7 @@ def make_executable(file_path, dry_run=False):
         os.chmod(file_path, 0o755)
 
 # Process a specific patch
-def process_patch(patch, board, validate_yaml_only=False, dry_run=False):
+def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interactive_mode=False):
     if patch['title']:
         if not validate_yaml_only:
             logging.info(f"Processing patch: {patch['title']}")
@@ -275,7 +289,8 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False):
         if 'files' in task:
             for file in task['files']:
                 if file['source'] and file['destination']:
-                    if 'github.com' in file['source']:
+                    if file['source'].startswith('https://github.com/') and not '/raw/' in file['source']:
+                        logging.info(f"Processing github download for: {file['source']}")
                         if not is_network_available():
                             result_msg = f"No Network: Unable to download {file['source']}"
                             logging.warning(result_msg)
@@ -309,6 +324,14 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False):
                     logging.error(result_msg)
                     return False, result_msg
 
+        if 'alert' in task:
+            for alert_message in task['alert']:
+                if  interactive_mode:
+                    logging.debug(f"Displaying Alert: {alert_message}")
+                    show_dialog(alert_message, continue_only=True)
+                else:
+                    logging.info(f"Non-interactive Mode Alert: {alert_message}")
+
         # Handle marking files as executable
         if 'executable' in task:
             for file in task['executable']:
@@ -319,17 +342,36 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False):
                     result_msg = f"Invalid YAML file: Executable missing path"
                     logging.error(result_msg)
                     return False, result_msg
+
         # Handle launch commands
         if 'commands' in task and not validate_yaml_only:
             for command in task['commands']:
                 logging.info(f"Executing command: {command}")
-                if not dry_run: subprocess.run(command, shell=True)
+                if not dry_run:
+                    result = subprocess.run(
+                        command,
+                        shell=True,
+                        stdout = subprocess.PIPE,
+                        stderr = subprocess.PIPE,
+                        universal_newlines = True
+                    )
+                    if result.stdout: logging.debug(result.stdout)
+                    if result.stderr: logging.error(result.stderr)
+
+        if 'reboot' in task:
+            reboot = True
+            if interactive_mode:
+                reboot = show_dialog('About to Reboot. Do you want to proceed?')
+
+            if reboot:
+                logging.info(f"Rebooting")
+                os.system('reboot')
 
     result_msg = f"Patch Validation Complete" if validate_yaml_only else f"Patch Installation Complete" 
     return True, result_msg
 
 # Process patches based on the YAML file
-def process_patches(patch_file, patch_id=None, dry_run=False):
+def process_patches(patch_file, patch_id=None, dry_run=False, interactive_mode=False):
     logging.info(f"Processing Patch File: {patch_file}")
     board = detect_board()
 
@@ -344,10 +386,11 @@ def process_patches(patch_file, patch_id=None, dry_run=False):
         logging.critical(result_msg)
         return False, return_message
 
+    logging.debug(f"patch_id={patch_id}")
     if patch_id:
         patch = next((p for p in patches if p.get('id') == patch_id), None)
         if patch:
-            result, result_msg = process_patch(patch, board, dry_run=dry_run)
+            result, result_msg = process_patch(patch, board, dry_run=dry_run, interactive_mode=interactive_mode)
             return_message = f"{return_message}\n{result_msg}"
         else:
             result_msg = f"No patch found with ID: {patch_id}"
@@ -356,7 +399,7 @@ def process_patches(patch_file, patch_id=None, dry_run=False):
             return False, result_msg
     else:
         for patch in patches:
-            result, result_msg = process_patch(patch, board, dry_run=dry_run)
+            result, result_msg = process_patch(patch, board, dry_run=dry_run, interactive_mode=interactive_mode)
             return_message = f"{return_message}\n{result_msg}"
 
     return result, return_message
@@ -376,7 +419,7 @@ def validate_patch_file(patch_file):
 
         try:
             for patch in patches:
-                if not process_patch(patch, board, True, True):
+                if not process_patch(patch, board, validate_yaml_only=True, dry_run=True, interactive_mode=False):
                     return False
         except Exception as e:
             logging.critical(f"Error occurred validating Patch file ({patch_file}) {e=}, {type(e)=}")
@@ -426,7 +469,7 @@ def list_patches(directory, full_check=False):
                         # Perform a full check if requested
                         is_valid = True
                         if full_check:
-                            is_valid = process_patch(patch, board, validate_yaml_only=True, dry_run=True)
+                            is_valid = process_patch(patch, board, validate_yaml_only=True, dry_run=True, interactive_mode=False)
 
                         # Append the result for this file
                         patches_info.append({
@@ -492,14 +535,52 @@ def wrap_text(text, font, max_width, cut_off=False):
 
     return lines
 
-def main_menu():
+def draw_list(list, list_rect, cursor_item, selection_list=True, lock_top=False):
+    max_list_display_count = ((list_rect.height - PADDING // 2) // FONT_SIZE)
+    if selection_list:
+        list_offset = 0
+        if len(list) > max_list_display_count:
+            if cursor_item < (max_list_display_count // 3):
+                list_offset =  0
+            elif cursor_item > (max_list_display_count * 2 // 3):
+                list_offset = max(cursor_item - (max_list_display_count * 2 // 3), 0)
+                if list_offset > max(len(list) - max_list_display_count, 0):
+                    list_offset = max(len(list) - max_list_display_count, 0)
+                #logging.debug(f"len(list)={len(list)} cursor_item={cursor_item} max_list_display_count={max_list_display_count} list_offset={list_offset}")
+    else:
+        list_offset = max(min(cursor_item, len(list) - max_list_display_count), 0)
+
+    for i, list_item in enumerate(list):
+        if list_offset <= i and (i - list_offset) < max_list_display_count:
+            if i == 0 and not selection_list:
+                color = WHITE
+            else:
+                color = LIGHT_GREY
+                if i == cursor_item and selection_list:
+                    color = BLACK
+                    pygame.draw.rect(screen, LIGHT_GREY, pygame.Rect(list_rect.x, list_rect.y + (i - list_offset) * FONT_SIZE - PADDING // 2, screen_width // 2 - PADDING * 2, FONT_SIZE))
+
+            if selection_list:
+                list_line = wrap_text(list_item, normal_font, list_rect.width - PADDING - BORDER * 2, True)
+            else:
+                list_line = list_item
+            draw_text(list_line, normal_font, color, screen, list_rect.x + PADDING, list_rect.y + (i - list_offset) * FONT_SIZE + 2)
+
+def main_menu(log_level=2, dry_run=True):
     # Load patches
     patch_list = list_patches('patches/', False)
     logging.debug(f"{patch_list}")
 
     selected_patch = 0
+    description_pos = 0
+    current_list = 0
     run = True
     installing_patch = False
+
+    list_offset = 0
+    description_offset = 0
+
+    current_list = 0
 
     while run:
         screen.fill(BLACK)
@@ -509,8 +590,24 @@ def main_menu():
         pygame.draw.rect(screen, HIGHLIGHT_COLOR, pygame.Rect(0, 0, screen_width, title_font.get_height()))
         screen.blit(title_text, (screen_width // 2 - title_text.get_width() // 2, PADDING))
 
+        if dry_run:
+            dry_run_instruction = '                      [ Dry Run Mode On ]'
+        else:
+            dry_run_instruction = ''
+
         # Bottom bar with instructions
-        draw_text("Press A to install, B to exit, Arrows to navigate", instruction_font, HIGHLIGHT_COLOR, screen, PADDING, screen_height - INSTRUCTIONS_HEIGHT)
+        draw_text(f"Press A to install, B to exit, Arrows to navigate{dry_run_instruction}", instruction_font, HIGHLIGHT_COLOR, screen, PADDING, screen_height - INSTRUCTIONS_HEIGHT)
+
+
+        # Display patch list on the left half of the screen
+        patch_list_height = screen_height - TITLE_HEIGHT - INSTRUCTIONS_HEIGHT - PADDING
+        patch_list_rect = pygame.Rect(PADDING, TITLE_HEIGHT + PADDING, screen_width // 2 - PADDING * 2, patch_list_height)
+
+        # Display selected patch description on the right side
+        description_rect = pygame.Rect(screen_width // 2 + PADDING, TITLE_HEIGHT + PADDING, screen_width // 2 - PADDING * 2, patch_list_height)
+        selected_patch_description = f"{patch_list[selected_patch].get('title')}\n{patch_list[selected_patch].get('description', 'No description available.')}"
+        description_lines = wrap_text(selected_patch_description, normal_font, description_rect.width - PADDING)
+        max_description_display_lines = ((description_rect.height - PADDING // 2) // FONT_SIZE)
 
         # Handle user input
         for event in pygame.event.get():
@@ -520,44 +617,58 @@ def main_menu():
                 if event.key == pygame.K_b:  # Exit confirmation
                     run = not show_dialog("Are you sure you want to exit?")
                     if not run:
+                        logging.info("Exiting")
                         pygame.quit()
                         sys.exit()
 
-                elif event.key == pygame.K_DOWN:
-                    selected_patch = (selected_patch + 1) % len(patch_list)
-                elif event.key == pygame.K_UP:
-                    selected_patch = (selected_patch - 1) % len(patch_list)
+                elif event.key == pygame.K_DOWN or f"{pygame.key.name(event.key)}" == "[6]":
+                    if current_list == 0:
+                        selected_patch = (selected_patch + 1) % len(patch_list)
+                    else:
+                        description_pos = min((description_pos + 1), len(description_lines) - max_description_display_lines)
+                elif event.key == pygame.K_UP or f"{pygame.key.name(event.key)}" == "[4]":
+                    if current_list == 0:
+                        selected_patch = (selected_patch - 1) % len(patch_list)
+                    else:
+                        description_pos = max((description_pos - 1), 0)
+                elif event.key == pygame.K_RIGHT:
+                    current_list = 1
+                elif event.key == pygame.K_LEFT:
+                    current_list = 0
+                    description_pos = 0
+                elif event.key == pygame.K_SPACE:  # Toggle Dry Run mode
+                    dry_run = not dry_run
+                elif event.key == pygame.K_x:  # Turn on debug logging
+                    logging.info(f"Log Level: {log_level}")
+                    logging.getLogger().setLevel(logging.DEBUG)
+                    #logging.getLogger().setLevel(logging.DEBUG)
+                    #console = logging.StreamHandler()
+                    #logging.getLogger().addHandler(console)
+                    logging.debug("Turned on debug logging")
                 elif event.key == pygame.K_a:  # Confirm installation
-                    installing_patch = confirm_install(patch_list[selected_patch])
+                    installing_patch = confirm_install(patch_list[selected_patch], dry_run)
+                else:
+                    logging.debug(f"Key pressed: {pygame.key.name(event.key)}")
 
-        # Display patch list on the left half of the screen
-        patch_list_height = screen_height - TITLE_HEIGHT - INSTRUCTIONS_HEIGHT - PADDING
-        patch_list_rect = pygame.Rect(PADDING, TITLE_HEIGHT + PADDING, screen_width // 2 - PADDING * 2, patch_list_height)
 
-        # Display selected patch description on the right side
-        description_rect = pygame.Rect(screen_width // 2 + PADDING, TITLE_HEIGHT + PADDING, screen_width // 2 - PADDING * 2, patch_list_height)
         
-        pygame.draw.rect(screen, HIGHLIGHT_COLOR, pygame.Rect(patch_list_rect.x - PADDING, patch_list_rect.y - PADDING * 2, patch_list_rect.width + PADDING * 2, patch_list_rect.height), BORDER)
-        pygame.draw.rect(screen, HIGHLIGHT_COLOR, pygame.Rect(description_rect.x - PADDING, description_rect.y - PADDING * 2, description_rect.width + PADDING * 2, description_rect.height), BORDER)
+        pygame.draw.rect(screen, WHITE if current_list == 0 else HIGHLIGHT_COLOR, pygame.Rect(patch_list_rect.x - PADDING, patch_list_rect.y - PADDING * 2, patch_list_rect.width + PADDING * 2, patch_list_rect.height), BORDER)
+        pygame.draw.rect(screen, WHITE if current_list == 1 else HIGHLIGHT_COLOR, pygame.Rect(description_rect.x - PADDING, description_rect.y - PADDING * 2, description_rect.width + PADDING * 2, description_rect.height), BORDER)
         
-        # Render patch list
-        for i, patch in enumerate(patch_list):
-            color = LIGHT_GREY
-            if i == selected_patch:
-                color = BLACK
-                pygame.draw.rect(screen, LIGHT_GREY, pygame.Rect(patch_list_rect.x, patch_list_rect.y + i * FONT_SIZE - PADDING // 2, screen_width // 2 - PADDING * 2, FONT_SIZE))
-            list_title = wrap_text(patch['title'], normal_font, patch_list_rect.width - PADDING - BORDER * 2, True)
-            draw_text(list_title, normal_font, color, screen, patch_list_rect.x + PADDING, patch_list_rect.y + i * FONT_SIZE + 2)
+        patch_titles = []
+        for patch in patch_list:
+            patch_titles.append(patch['title'])
 
-        # Wrap and render selected patch description
-        selected_patch_description = f"{patch_list[selected_patch].get('title')}\n{patch_list[selected_patch].get('description', 'No description available.')}"
-        wrapped_description = wrap_text(selected_patch_description, normal_font, description_rect.width - PADDING)
+        draw_list(patch_titles, patch_list_rect, selected_patch, True)
+        draw_list(description_lines, description_rect, description_pos, False, True)
 
+        '''
         # Render the wrapped text in the description area
         drawing_title = True
-        for i, line in enumerate(wrapped_description):
+        for i, line in enumerate(description_lines):
             if line == '': drawing_title = False
             draw_text(line, normal_font, WHITE if drawing_title else LIGHT_GREY, screen, description_rect.x + PADDING, description_rect.y + i * FONT_SIZE)
+        '''
 
         # Update the screen
         pygame.display.flip()
@@ -571,7 +682,7 @@ def main_menu():
             
             patch_to_install = patch_list[selected_patch]
 
-            result, result_msg = process_patches(patch_to_install['file_path'], patch_id=patch_to_install['patch_id'], dry_run=True)
+            result, result_msg = process_patches(patch_to_install['file_path'], patch_id=patch_to_install['patch_id'], dry_run=dry_run, interactive_mode=True)
             if not result:
                 logging.info(f"Patch failed: {result_msg}")
                 result_msg = f"Patch Install Failed: {result_msg}"
@@ -630,11 +741,12 @@ def show_dialog(dialog_msg, prompt_msg = None, continue_only = False):
                     logging.debug(f"Confirm Canceled")
                     return False
 
-def confirm_install(patch):
+def confirm_install(patch, dry_run=False):
     """Displays a confirmation dialog for patch installation."""
     # Display a confirmation dialog, and return True if confirmed
     # (For now, automatically return True to simulate confirmation)
-    msg = f"Are you sure you want to install the \"{patch['title']}\" patch?"
+    dry_run_prefix="[DRY RUN MODE]: " if dry_run else ""
+    msg = f"{dry_run_prefix}Are you sure you want to install the \"{patch['title']}\" patch?"
     return show_dialog(msg)
 
 # Argument parsing
@@ -654,8 +766,6 @@ def parse_arguments():
 if __name__ == '__main__':
     args = parse_arguments()
 
-    args.dry_run=True # TODO: Remove this once testing is complete.
-
     # Default log level is 2 (INFO)
     # Adjust log level based on -q (quiet) and -v (verbose)
     log_level = max(0, min(3, 3 if args.dry_run else 2 + args.verbose - args.quiet))
@@ -663,6 +773,8 @@ if __name__ == '__main__':
 
      # Process patches with optional patch ID and dry run
     if args.patch_file:
+        interactive_mode = False
+
         logging.info(f"Installing Patch: {args.patch_file}")
         if validate_patch_file(args.patch_file):
             process_patches(args.patch_file, args.patch_id, dry_run=args.dry_run)
@@ -671,4 +783,4 @@ if __name__ == '__main__':
             exit(1)
     else:
         logging.info(f"Starting Patch Installer...")
-        main_menu()
+        main_menu(log_level, args.dry_run)
