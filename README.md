@@ -3,6 +3,9 @@
 This repo is where I am currently testing ways to easily
 deploy patches in knulli.
 
+The installer reads [patch definition files](Patch_Installer_YAML_Format.md)
+stored in the `/userdata/system/patches` folder.
+
 ## Setup Instructions
 
 This is in Alpha but if you wish to test simply copy the
@@ -16,13 +19,13 @@ enter the commands:
 ```bash
 cd /userdata/roms/pygame
 wget https://raw.githubusercontent.com/zarquon-42/knulli-patch-installer/refs/heads/main/Patch-Installer.pygame
-
 ```
 
 The first time you run the app it will will ask you to
-download some patch definition files.  If you do not wish
-to do this and have your own patch files, you can place
-them in a /userdata/system/patches folder.
+download some [patch definition files](Patch_Installer_YAML_Format.md).
+If you do not wish to do this and have your own patch
+files, you can place them in a `/userdata/system/patches`
+folder.
 
 ## Usage
 
@@ -41,7 +44,7 @@ in development:
 - X Button to turn on debugging logging
 - Select Button to Toggle Dry-Run mode.
 
-## CLI Usage
+### CLI Usage
 
 This can also be used as a CLI by making the file executable with:
 
