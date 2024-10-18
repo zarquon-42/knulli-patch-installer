@@ -1,0 +1,39 @@
+- title: "Install Dual Resolution Bezels Patch"
+  id: dual_resolution_patch
+  description: >
+    WARNING: ONLY INSTALL ON Knulli version from 20240721
+
+    Installs support for bezels on both HDMI and Native.
+    
+    This Patch works with 2024-07-21 and will not work with newer versions.
+
+    This Patch will download over 800MB of data so will take some time.
+  tasks:
+    - alert:
+      - "Only Proceed if running Knulli 20240721."
+
+    - commands:
+        - "cp -n /usr/lib/python3.11/site-packages/configgen/utils/bezels.py /usr/lib/python3.11/site-packages/configgen/utils/bezels.py.bak"
+
+    - files:
+      - source: "https://raw.githubusercontent.com/zarquon-42/distribution/59d38505e530208dceb1f0315ccf5fe8515eeb79/package/batocera/core/batocera-configgen/configgen/configgen/utils/bezels.py"
+        destination: "/usr/lib/python3.11/site-packages/configgen/utils"
+
+    - commands:
+        - "batocera-save-overlay >/dev/null"
+
+    - files:
+      - source: "https://github.com/chrizzo-hb/knulli-bezels"
+        destination: "/userdata/decorations/"
+        github_path: "default-knulli"
+        ignore: ".*.md|.gitignore"
+
+      - source: "https://github.com/zarquon-42/knulli-bezels-dual-resolution/"
+        destination: "/userdata/decorations/"
+        github_path: "dual_resolution_arcade/games"
+        ignore: ".*.md|.gitignore"
+
+    - commands:
+        - "mv /userdata/decorations/dual_resolution_arcade/games /userdata/decorations/default-knulli"
+        - "rm -rf /userdata/decorations/dual_resolution_arcade/"
+        - "batocera-settings-set global.bezel dual_resolution"
