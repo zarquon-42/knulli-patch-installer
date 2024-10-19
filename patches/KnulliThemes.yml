@@ -25,5 +25,5 @@
     
     - extract:
         - source: "/tmp/patch/es-theme-knulli.zip"
-          destination: "/userdata/themes/es-theme-knulli/"
+          destination: "/userdata/themes/"
 
