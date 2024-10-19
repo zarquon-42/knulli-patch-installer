@@ -5,31 +5,16 @@
     It will overwrite the the basic.xml and detailed.xml files within
     the system installed theme Carbon.
 
+    (Includes fix for 12-hour clock.)
+
   tasks:
     - files:
-      - source: "https://raw.githubusercontent.com/rodneyshupe/es-theme-carbon/refs/heads/master/views/system.xml"
-        destination: "/usr/share/emulationstation/themes/es-theme-carbon/views/system.xml"
+      - source: "https://raw.githubusercontent.com/rodneyshupe/es-theme-carbon/refs/heads/master/views/screen.xml"
+        destination: "/usr/share/emulationstation/themes/es-theme-carbon/views/"
       - source: "https://raw.githubusercontent.com/rodneyshupe/es-theme-carbon/refs/heads/master/views/basic.xml"
-        destination: "/usr/share/emulationstation/themes/es-theme-carbon/views/basic.xml"
+        destination: "/usr/share/emulationstation/themes/es-theme-carbon/views/"
       - source: "https://raw.githubusercontent.com/rodneyshupe/es-theme-carbon/refs/heads/master/views/detailed.xml"
-        destination: "/usr/share/emulationstation/themes/es-theme-carbon/views/detailed.xml"
+        destination: "/usr/share/emulationstation/themes/es-theme-carbon/views/"
     
-    - commands:
-      - "batocera-save-overlay"
-      #- "cat configs/emulationstation/es_settings.cfg | grep ' name=\"ThemeSet\"' | grep ' value=\"es-theme-carbon-dev\"' || rm -rf /userdata/themes/es-theme-carbon-dev/"
-
-- title: "Carbon Theme Patch - 12 hour clock fix"
-  description: >
-    This patches the Carbon theme to fix an issue with the time
-    being displayed.
-
-    It will overwrite the the system.xml file within the system
-    installed theme Carbon.
-
-  tasks:
-    - files:
-      - source: "https://raw.githubusercontent.com/rodneyshupe/es-theme-carbon/refs/heads/master/views/system.xml"
-        destination: "/usr/share/emulationstation/themes/es-theme-carbon/views/system.xml"
-
     - commands:
       - "batocera-save-overlay"
