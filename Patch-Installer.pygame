@@ -16,6 +16,8 @@ import requests
 import socket
 import zipfile
 
+VERSION = '1.0.1'
+
 # Constants for colors
 BACKGROUND_COLOR = (0, 0, 0)
 NORMAL_TEXT_COLOR = (150, 150, 150)
@@ -607,7 +609,7 @@ def main_menu(log_level=2, dry_run=True):
         g_screen.fill(BACKGROUND_COLOR)
         
         # Top bar with app title
-        title_text = g_normal_font.render("Patch Installer", True, TITLE_TEXT_COLOR)
+        title_text = g_normal_font.render(f"Patch Installer v{VERSION}", True, TITLE_TEXT_COLOR)
         pygame.draw.rect(g_screen, TITLE_BG_COLOR, pygame.Rect(0, 0, g_screen_width, g_title_font.get_height()))
         g_screen.blit(title_text, (g_screen_width // 2 - title_text.get_width() // 2, PADDING))
 
