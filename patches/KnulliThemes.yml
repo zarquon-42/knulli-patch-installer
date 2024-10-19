@@ -1,0 +1,25 @@
+- title: "symbuzzer/es-theme-knulli v1.1.0"
+  id: symbuzzer/es-theme-knulli
+  description: >
+    Theme created by symbuzzer specifically for Knulli.  This is a 
+    highly modified es-theme-basic for small screens with knulli colors.
+
+    * Removed all unnecessary options from theme settings
+    
+    * Removed unnecessary files and reduces theme size
+    
+    * Removed system logo swirl effect
+    
+    * Added more Knulli-specific changes
+    
+    * Added more navigation sounds for future Emulation Station updates
+    
+  tasks:
+    - files:
+      - source: "https://github.com/symbuzzer/es-theme-knulli/releases/download/v1.1.0/es-theme-knulli.zip"
+        destination: "/tmp/patch"
+    
+    - extract:
+        - source: "/tmp/patch/es-theme-knulli.zip"
+          destination: "/userdata/themes/es-theme-knulli/"
+
