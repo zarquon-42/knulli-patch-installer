@@ -1,9 +1,13 @@
 - title: "symbuzzer/es-theme-knulli v1.1.0"
-  id: symbuzzer/es-theme-knulli
+  id: symbuzzer-es-theme-knulli
   description: >
     Theme created by symbuzzer specifically for Knulli.  This is a 
     highly modified es-theme-basic for small screens with knulli colors.
 
+    NOTE: This download is more than 125MB
+
+    Uodates:
+    
     * Removed all unnecessary options from theme settings
     
     * Removed unnecessary files and reduces theme size
