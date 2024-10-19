@@ -300,7 +300,7 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interac
         if 'files' in task:
             for file in task['files']:
                 if file['source'] and file['destination']:
-                    if file['source'].startswith('https://github.com/') and not '/raw/' in file['source']:
+                    if file['source'].startswith('https://github.com/') and not '/raw/' in file['source'] and not '/releases/download/' in file['source']:
                         logging.info(f"Processing github download for: {file['source']}")
                         if not is_network_available():
                             result_msg = f"No Network: Unable to download {file['source']}"
