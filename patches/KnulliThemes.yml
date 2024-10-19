@@ -20,7 +20,7 @@
     
   tasks:
     - files:
-      - source: "https://github.com/symbuzzer/es-theme-knulli/releases/download/v1.1.0/es-theme-knulli.zip"
+      - source: "https://github.com/symbuzzer/es-theme-knulli/releases/latest/download/es-theme-knulli.zip"
         destination: "/tmp/patch"
     
     - extract:
