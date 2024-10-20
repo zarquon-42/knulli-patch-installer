@@ -16,7 +16,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.1.2'
+VERSION = '1.1.3'
 
 # Constants for colors
 BACKGROUND_COLOR = (0, 0, 0)
@@ -216,6 +216,13 @@ def download_github_files(repo, path, destination_path, ignore, dry_run=False, m
 
 def download_patch_files(message='Download patch definition files?', dry_run=False):
     if (not g_interactive_mode) or show_dialog(message):
+        if g_interactive_mode and show_dialog('Remove existing patch definition files?'):
+            patch_list = list_patches(PATCH_DIR, False, skip_invalid=False)
+            for patch in patch_list:
+                if os.path.isfile(patch['file_path']):
+                    logging.debug(f"Removing patch file: {patch['file_path']}")
+                    os.remove(patch['file_path'])
+
         logging.debug(f"Downloading to {os.path.dirname(PATCH_DIR)}/patches")
         download_github_files('zarquon-42/knulli-patch-installer', 'patches', os.path.dirname(PATCH_DIR), ".*|!.*\.yml|.*\.yaml", dry_run, 'Downloading patch definition files...')
 
