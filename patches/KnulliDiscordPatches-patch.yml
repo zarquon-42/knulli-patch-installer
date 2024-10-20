@@ -130,3 +130,55 @@
 
     - commands:
       - "cd /tmp/patch; /tmp/patch/ledservice_installer.sh"
+
+- title: "RG40XX H/V LED scripts v15 by @chrizzo"
+  id: chizzo_joystick_led_support_v15
+  description: >
+    And here's v15 of the RG40XX H/V LED scripts (containing code by @Gamma, @Mikhailzrick, and @dopaz).
+
+    New feature: When earning a retro achievement, you will be rewarded by a short rainbow swirl!
+    (Thanks to @SargentoTITO for pointing me to this!)
+    
+    LED service can be disabled via System Settings -> Services -> Analog_Stick_LED
+
+    Customize in batocera.conf like so:
+
+    led.mode=1
+
+    led.brightness=100
+
+    led.speed=15
+
+    led.colour=148 255 0
+
+    led.retroachievements=1 # 0 turns the effect off.
+
+    Allowed modes are 0-6 (off, solid, fast breathe, medium breathe, slow breathe, rainbow, rainbow swirl), allowed min/max values for everything else are 0/1-255. By default, led.colour applies to both sticks (RG40XX H). You can optionally use led.colour.right to override the color of the right stick.
+
+    Changes will be applied automatically once you save batocera.conf while the service is running.
+
+    While battery charges the stick breathes green
+    When battery charge reaches 20%-6%, the sticks breathes yellow
+    When battery charge reaches 5% or less, the sticks breathes red
+    When battery charge is above 20%, the sticks turn back to whatever is customized in batocera.conf
+
+  boards: 
+    - "rg40xx"
+
+  tasks:
+    - files:
+      - source: "https://github.com/zarquon-42/knulli-patches/raw/refs/heads/main/patches/rg40xx-h-v-stick-leds-v15-installer.zip"
+        destination: "/tmp/patch"
+    
+    - extract:
+        - source: "/tmp/patch/rg40xx-h-stick-leds-v14-installer.zip"
+          destination: "/tmp/patch"  # Different extraction path
+
+    - executable:
+        - path: "/tmp/patch/ledservice_installer.sh"
+
+    - alert:
+      - "About to run installer script.  This will cause a reboot."
+
+    - commands:
+      - "cd /tmp/patch; /tmp/patch/ledservice_installer.sh"
