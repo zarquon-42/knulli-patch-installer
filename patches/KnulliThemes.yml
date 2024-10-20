@@ -1,4 +1,4 @@
-- title: "symbuzzer/es-theme-knulli v1.2.0"
+- title: "symbuzzer/es-theme-knulli"
   id: symbuzzer-es-theme-knulli
   description: >
     Theme created by symbuzzer specifically for Knulli.  This is a 
@@ -6,28 +6,15 @@
 
     NOTE: This download is more than 125MB
 
-    Uodates:
-    
-    * Added new detailed game list
-    
-    * Added Batocera colorset
-    
-    * Moved clock position from bottom to top
-    
-    * Fixed language file
-    
-    * Re-added looping game text & video preview feature
-    
-    * Modified bottom and top bars for enlarging help buttons and status icons
-    
-    * Fixed detailed and grid xml's coding structure
-    
-    * Removed unused options actions
-    
+    See changed log: https://github.com/symbuzzer/es-theme-knulli/
+        
   tasks:
     - files:
       - source: "https://github.com/symbuzzer/es-theme-knulli/releases/latest/download/es-theme-knulli.zip"
         destination: "/tmp/patch"
+
+    - commands:
+      - "[ -d /userdata/themes/es-theme-knulli ]  && rm -rf /userdata/themes/es-theme-knulli"
     
     - extract:
         - source: "/tmp/patch/es-theme-knulli.zip"
