@@ -171,7 +171,7 @@
         destination: "/tmp/patch"
     
     - extract:
-        - source: "/tmp/patch/rg40xx-h-stick-leds-v14-installer.zip"
+        - source: "/tmp/patch/rg40xx-h-v-stick-leds-v15-installer.zip"
           destination: "/tmp/patch"  # Different extraction path
 
     - executable:
