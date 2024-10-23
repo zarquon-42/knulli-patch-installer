@@ -1,4 +1,4 @@
-- title: "symbuzzer/es-theme-knulli"
+- title: "es-theme-knulli"
   id: symbuzzer-es-theme-knulli
   description: >
     Theme created by symbuzzer specifically for Knulli.  This is a 
@@ -9,6 +9,10 @@
     See changed log: https://github.com/symbuzzer/es-theme-knulli/
         
   tasks:
+    - version_check:
+      - local: "grep 'version:' /userdata/themes/es-theme-knulli/theme.xml | sed 's/version:[[:space:]]*\\(.*\\)/\\1/'"
+        remote: "curl -sL https://raw.githubusercontent.com/symbuzzer/es-theme-knulli/main/theme.xml | grep 'version:' | sed 's/version:[[:space:]]*\\(.*\\)/\\1/'"
+
     - files:
       - source: "https://github.com/symbuzzer/es-theme-knulli/releases/latest/download/es-theme-knulli.zip"
         destination: "/tmp/patch"
@@ -17,8 +21,8 @@
       - "[ -d /userdata/themes/es-theme-knulli ]  && rm -rf /userdata/themes/es-theme-knulli"
     
     - extract:
-        - source: "/tmp/patch/es-theme-knulli.zip"
-          destination: "/userdata/themes/"
+      - source: "/tmp/patch/es-theme-knulli.zip"
+        destination: "/userdata/themes/"
 
 - title: "Carbon Theme Patch - Small Screen Fix"
   id: es-theme-carbon-small-screen-fix
