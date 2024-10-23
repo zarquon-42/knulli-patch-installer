@@ -16,7 +16,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.3.0'
+VERSION = '1.3.1'
 
 # Constants for colors
 BACKGROUND_COLOR = (0, 0, 0)
@@ -106,7 +106,7 @@ def version_tuple(version):
     try:
         return tuple(map(myint, (version.split("."))))
     except:
-        logger.error(f"Problem converting version number {version}")
+        logging.error(f"Problem converting version number {version}")
 
     return (9999, 9999, 9999)
 
