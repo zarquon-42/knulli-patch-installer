@@ -16,7 +16,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.2.0'
+VERSION = '1.3.0'
 
 # Constants for colors
 BACKGROUND_COLOR = (0, 0, 0)
@@ -96,6 +96,19 @@ def is_network_available(host="8.8.8.8", port=53, timeout=3):
         logging.warning(f"Unhandled exception during network check: {e=}, {type(e)=}")
         return False
 
+def version_tuple(version):
+    def myint(a):
+        if a.isdigit():
+            return int(a)
+        else:
+            return 9999
+
+    try:
+        return tuple(map(myint, (version.split("."))))
+    except:
+        logger.error(f"Problem converting version number {version}")
+
+    return (9999, 9999, 9999)
 
 # Detect board type
 def detect_board():
@@ -424,13 +437,13 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interac
                         if result:
                             version_remote=result.stdout.strip()
                         if version_remote and len(version_remote) > 0:
-                            if version_local == version_remote:
+                            if version_tuple(version_local) == version_tuple(version_remote):
                                 logging.debug("Versions Check Matched {version_local}")
                                 if show_dialog(f"Version up-to-date ({version_remote})\n\nDo you want to install anyways?", button_confirm="install"):
                                     continue
                                 else:
                                     return False, None
-                            elif version_local < version_remote:
+                            elif version_tuple(version_local) < version_tuple(version_remote):
                                 logging.debug(f"Remote version ({version_remote}) newer than Local version ({version_local})")
                                 if show_dialog(f"New version available ({version_remote})\n\nDo you want to install?", button_confirm="install"):
                                     continue
@@ -554,8 +567,11 @@ def list_patches(directory, full_check=False, compatibility_check=True, skip_inv
                 with open(file_path, 'r') as file:
                     patches = yaml.safe_load(file)
                     
-                    # Check if the YAML contains a title (if not, skip the file)
+                    if not patches:
+                        logging.info(f"No patches found in patch file ({filename})")
+                        continue
 
+                    # Check if the YAML contains a title (if not, skip the file)
                     for patch in patches:
                         if 'title' not in patch:
                             logging.debug(f"No Title")
@@ -822,7 +838,14 @@ def show_message(message, step = None, progress = None, log_message = None):
 
         pygame.display.flip()
 
-def show_dialog(dialog_msg, prompt_msg = None, continue_only = False, button_confirm="confirm", button_cancel="cancel"):
+def show_dialog(dialog_msg, prompt_msg = None, continue_only = False, button_confirm=None, button_cancel="cancel"):
+    if not g_interactive_mode:
+        logging.log(f"Non-interactive show_dialog: {dialog_msg}")
+        logging.debug(f"Non-interactive show_dialog: Returning: {continue_only}")
+        return continue_only
+
+    if not button_confirm:
+        button_confirm = 'continue' if continue_only else 'confirm'
 
     wrapped_message = wrap_text(dialog_msg, g_normal_font, g_screen_width * 0.80)  # Wrap text to fit screen g_screen_width
 
@@ -842,7 +865,7 @@ def show_dialog(dialog_msg, prompt_msg = None, continue_only = False, button_con
 
         if not prompt_msg:
             if continue_only:
-                prompt_msg = f"Press A to continue"
+                prompt_msg = f"Press A to {button_confirm}"
             else:
                 prompt_msg = f"Press A to {button_confirm}, B to {button_cancel}"
 
@@ -888,6 +911,49 @@ def parse_arguments():
 
     return parser.parse_args()
 
+def update_check():
+    def get_script_version_from_github(script_url):
+        response = requests.get(script_url)
+        if response.status_code != 200:
+            return None
+
+        for line in response.text.splitlines():
+            if "VERSION =" in line:
+                return line.split("=")[1].strip().replace('"', '').replace("'", "")
+        return None
+
+    script_url = "https://raw.githubusercontent.com/zarquon-42/knulli-patch-installer/refs/heads/main/Patch-Installer.pygame"
+
+    if is_network_available:
+        script_path = os.path.realpath(__file__)
+        logging.info(f"{script_path} v{VERSION}")
+
+        github_version = get_script_version_from_github(script_url)
+        if github_version and version_tuple(github_version) > version_tuple(VERSION):
+            logging.info(f"Newer version ({github_version}) found.")
+            if (g_interactive_mode and show_dialog(f"New version {github_version} available.\nUpdate now?",button_confirm="Update", button_cancel="Skip")) or (not g_interactive_mode):
+                logging.info(f"Updating to version {github_version}...")
+
+                try:
+                    response = requests.get(script_url, timeout=10)
+                    if response.status_code == 200:
+                        with open(script_path, 'wb') as file:
+                            file.write(response.content)
+                    else:
+                        show_dialog(f"Error: Download Error\n{response.status_code}\nExiting...", continue_only=True, button_confirm='Exit')
+                        return False
+                except Exception as e:
+                    show_dialog(f"Error: Download Failed\n{str(e)}\nExiting...", continue_only=True, button_confirm='Exit')
+                    return False
+
+                if show_dialog(f"Update complete.  Restarting", button_confirm="Restart", button_cancel="Skip"):
+                    logging.info(f"Restarting...")
+                    os.execv(sys.argv[0], sys.argv)
+                else:
+                    logging.info("Restart canceled.")
+    return True
+
+
 # Example usage
 if __name__ == '__main__':
     args = parse_arguments()
@@ -931,5 +997,6 @@ if __name__ == '__main__':
         g_instruction_font = pygame.font.SysFont(None, 24)
         g_title_font = pygame.font.SysFont(None, 48)
 
-        logging.info(f"Starting Patch Installer...")
-        main_menu(log_level, args.dry_run)
+        if update_check():
+            logging.info(f"Starting Patch Installer...")
+            main_menu(log_level, args.dry_run)
