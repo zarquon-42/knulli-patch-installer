@@ -16,7 +16,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.1.4'
+VERSION = '1.2.0'
 
 # Constants for colors
 BACKGROUND_COLOR = (0, 0, 0)
@@ -216,8 +216,8 @@ def download_github_files(repo, path, destination_path, ignore, dry_run=False, m
                 os.chmod(destination_file, 0o755)  # Make executable
 
 def download_patch_files(message='Download patch definition files?', dry_run=False):
-    if (not g_interactive_mode) or show_dialog(message):
-        if g_interactive_mode and show_dialog('Remove existing patch definition files?'):
+    if (not g_interactive_mode) or show_dialog(message, button_confirm="download"):
+        if g_interactive_mode and show_dialog('Remove existing patch definition files?', button_confirm="remove"):
             patch_list = list_patches(PATCH_DIR, False, skip_invalid=False)
             for patch in patch_list:
                 if os.path.isfile(patch['file_path']):
@@ -306,7 +306,7 @@ def download_file(source, destination_path, move=False, dry_run=False, message=N
             return False
 
     return True
-                
+
 # Function to mark files as executable
 def make_executable(file_path, dry_run=False):
     file_path = os.path.abspath(file_path)
@@ -314,6 +314,24 @@ def make_executable(file_path, dry_run=False):
     logging.info(f"Making {file_path} executable")
     if not dry_run:
         os.chmod(file_path, 0o755)
+
+def run_command(command):
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            stdout = subprocess.PIPE,
+            stderr = subprocess.PIPE,
+            universal_newlines = True
+        )
+        if result.stdout: logging.debug(result.stdout)
+        if result.stderr: logging.error(result.stderr)
+
+    except Exception as e:
+        logging.critical(f"Error occurred executing command \"{command}\" [{e=}, {type(e)=}]")
+        result = None
+
+    return result
 
 # Process a specific patch
 def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interactive_mode=False):
@@ -392,26 +410,59 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interac
                     logging.error(result_msg)
                     return False, result_msg
 
+        if 'version_check' in task:
+            show_message("Checking version...")
+            for check in task['version_check']:
+                logging.debug(f"{check}")
+                if check['local'] and check['remote']:
+                    result = run_command(check['local'])
+                    if result:
+                        version_local=result.stdout.strip()
+                    
+                    if version_local and len(version_local) > 0:
+                        result = run_command(check['remote'])
+                        if result:
+                            version_remote=result.stdout.strip()
+                        if version_remote and len(version_remote) > 0:
+                            if version_local == version_remote:
+                                logging.debug("Versions Check Matched {version_local}")
+                                if show_dialog(f"Version up-to-date ({version_remote})\n\nDo you want to install anyways?", button_confirm="install"):
+                                    continue
+                                else:
+                                    return False, None
+                            elif version_local < version_remote:
+                                logging.debug(f"Remote version ({version_remote}) newer than Local version ({version_local})")
+                                if show_dialog(f"New version available ({version_remote})\n\nDo you want to install?", button_confirm="install"):
+                                    continue
+                                else:
+                                    return False, None
+                            else:
+                                logging.info(f"Local version ({version_local}) does not match remote version ({version_remote})")
+                                if show_dialog(f"Local version ({version_local}) does not match remote version ({version_remote})\n\nDo you want to install remote version?", button_confirm="install"):
+                                    continue
+                                else:
+                                    return False, None
+                        else:
+                            result_msg = f"Problem retrieving remove version."
+                            logging.error(result_msg)
+                            return False, result_msg
+
+                    else:
+                        logging.debug(f"Not installed.")
+                        continue
+
         # Handle launch commands
         if 'commands' in task and not validate_yaml_only:
             for idx, command in enumerate(task['commands']):
                 progress = (idx / len(task['commands'])) * 100 + 0.001
                 show_message('Installing Patch...', f"Executing {(idx + 1)} of {len(task['commands'])}...", progress, f"Executing command: {command}")
                 if not dry_run:
-                    result = subprocess.run(
-                        command,
-                        shell=True,
-                        stdout = subprocess.PIPE,
-                        stderr = subprocess.PIPE,
-                        universal_newlines = True
-                    )
-                    if result.stdout: logging.debug(result.stdout)
-                    if result.stderr: logging.error(result.stderr)
+                    result = run_command(command)
 
         if 'reboot' in task:
             reboot = True
             if interactive_mode:
-                reboot = show_dialog('About to Reboot. Do you want to proceed?')
+                reboot = show_dialog('About to Reboot. Do you want to proceed?', button_confirm="reboot")
 
             if reboot:
                 logging.info(f"Rebooting")
@@ -425,34 +476,29 @@ def process_patches(patch_file, patch_id=None, dry_run=False, interactive_mode=F
     logging.info(f"Processing Patch File: {patch_file}")
     board = detect_board()
 
-    return_message = ''
     # Load the YAML file
     if os.path.isfile(patch_file):
         with open(patch_file, 'r') as file:
             patches = yaml.safe_load(file)
     else:
         result_msg = f"Patch file does not exist ({patch_file})"
-        return_message = f"{return_message}\n{result_msg}"
         logging.critical(result_msg)
-        return False, return_message
+        return False, result_msg
 
     logging.debug(f"patch_id={patch_id}")
     if patch_id:
         patch = next((p for p in patches if p.get('id') == patch_id), None)
         if patch:
             result, result_msg = process_patch(patch, board, dry_run=dry_run, interactive_mode=interactive_mode)
-            return_message = f"{return_message}\n{result_msg}"
         else:
             result_msg = f"No patch found with ID: {patch_id}"
-            return_message = f"{return_message}\n{result_msg}"
             logging.error(result_msg)
             return False, result_msg
     else:
         for patch in patches:
             result, result_msg = process_patch(patch, board, dry_run=dry_run, interactive_mode=interactive_mode)
-            return_message = f"{return_message}\n{result_msg}"
 
-    return result, return_message
+    return result, result_msg
 
 def validate_patch_file(patch_file):
     logging.debug(f"Validating patch file: {patch_file}")
@@ -635,7 +681,7 @@ def main_menu(log_level=2, dry_run=True):
     patch_list = list_patches(PATCH_DIR, False, skip_invalid=skip_invalid)
     if len(patch_list) == 0:
         logging.warning(f"No patch definition files found at {PATCH_DIR}")
-        download_patch_files(f"No patch definition files found.\n\nConfirm if you wish to download available files?")
+        download_patch_files(f"No patch definition files found.\n\nConfirm if you want to download available files?")
         patch_list = list_patches(PATCH_DIR, False, skip_invalid=skip_invalid)
         if len(patch_list) == 0:
             show_dialog("No patches available. Existing", continue_only=True)
@@ -674,7 +720,7 @@ def main_menu(log_level=2, dry_run=True):
                 run = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_b:  # Exit confirmation
-                    run = not show_dialog("Are you sure you want to exit?")
+                    run = not show_dialog("Are you sure you want to exit?", button_confirm="exit")
                     if not run:
                         logging.info("Exiting")
                         pygame.quit()
@@ -729,13 +775,14 @@ def main_menu(log_level=2, dry_run=True):
             patch_to_install = patch_list[selected_patch]
 
             result, result_msg = process_patches(patch_to_install['file_path'], patch_id=patch_to_install['patch_id'], dry_run=dry_run, interactive_mode=True)
-            if not result:
+            if not result and result_msg:
                 logging.info(f"Patch failed: {result_msg}")
                 result_msg = f"Patch Install Failed: {result_msg}"
             else:
                 run = True
 
-            show_dialog(result_msg, continue_only=True)
+            if result_msg:
+                show_dialog(result_msg, continue_only=True)
 
             installing_patch = False
 
@@ -775,8 +822,8 @@ def show_message(message, step = None, progress = None, log_message = None):
 
         pygame.display.flip()
 
-def show_dialog(dialog_msg, prompt_msg = None, continue_only = False):
-    """Displays a confirmation dialog for exiting."""
+def show_dialog(dialog_msg, prompt_msg = None, continue_only = False, button_confirm="confirm", button_cancel="cancel"):
+
     wrapped_message = wrap_text(dialog_msg, g_normal_font, g_screen_width * 0.80)  # Wrap text to fit screen g_screen_width
 
     total_lines = 0
@@ -795,9 +842,9 @@ def show_dialog(dialog_msg, prompt_msg = None, continue_only = False):
 
         if not prompt_msg:
             if continue_only:
-                prompt_msg = "Press A to continue"
+                prompt_msg = f"Press A to continue"
             else:
-                prompt_msg = "Press A to confirm, B to cancel"
+                prompt_msg = f"Press A to {button_confirm}, B to {button_cancel}"
 
         prompt_text = g_normal_font.render(prompt_msg, True, HIGHLIGHT_COLOR)
         g_screen.blit(prompt_text, (g_screen_width // 2 - prompt_text.get_width() // 2, (g_screen_height - total_height)  // 2 + total_lines * message_text.get_height()))
@@ -826,7 +873,7 @@ def confirm_install(patch, dry_run=False):
     # (For now, automatically return True to simulate confirmation)
     dry_run_prefix="[DRY RUN MODE]: " if dry_run else ""
     msg = f"{dry_run_prefix}Are you sure you want to install the \"{patch['title']}\" patch?"
-    return show_dialog(msg)
+    return show_dialog(msg, button_confirm="install")
 
 # Argument parsing
 def parse_arguments():
