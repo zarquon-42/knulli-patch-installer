@@ -24,8 +24,9 @@
 
     For more info see: https://discord.com/channels/1173228527605272666/1261038054773227680/1283889420113678377
 
-  boards: 
-    - "rg40xx"
+  requirements:
+    boards: 
+      - "rg40xx"
 
   tasks:
     - files:
@@ -65,8 +66,9 @@
     Then reboots the system
 
 
-  boards: 
-    - "rg35xx-h"
+  requirements:
+    boards: 
+      - "rg35xx-h"
 
   tasks:
     - files:
@@ -111,8 +113,9 @@
     When battery charge reaches 5% or less, the sticks breathes red
     When battery charge is above 20%, the sticks turn back to whatever is customized in batocera.conf
 
-  boards: 
-    - "rg40xx"
+  requirements:
+    boards: 
+      - "rg40xx"
 
   tasks:
     - files:
@@ -163,8 +166,9 @@
     When battery charge reaches 5% or less, the sticks breathes red
     When battery charge is above 20%, the sticks turn back to whatever is customized in batocera.conf
 
-  boards: 
-    - "rg40xx"
+  requirements:
+    boards: 
+      - "rg40xx"
 
   tasks:
     - files:

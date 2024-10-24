@@ -20,8 +20,9 @@
     If the automatically created colour is not desired you can manually edit
     the `.led` file.
 
-  boards: 
-    - "rg40xx"
+  requirements:
+    boards: 
+      - "rg40xx"
 
   tasks:
     - files:
@@ -39,8 +40,9 @@
   id: per_game_led_settings_uninstall_patch
   description: "This patch uninstalls the Per Game LED Settings patch."
 
-  boards: 
-    - "rg40xx"
+  requirements:
+    boards: 
+      - "rg40xx"
 
   tasks:
     - files:
