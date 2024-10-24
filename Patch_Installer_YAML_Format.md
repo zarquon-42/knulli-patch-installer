@@ -29,15 +29,17 @@ The YAML file starts with a list of patches. Each patch can contain two groups o
     - **github_path**: (Optional and only relevant with github repositories) Path to the part of the github repo to download.
     - **ignore**: (Optional and only relevant with github repositories) A pipe separated list regex expressions describing files to ignore (or include using the "!" modifier.)
     - **executable**: A boolean value indicating whether the file should be marked executable (for scripts or binaries).
-  - **extract**: This section contains details about how
-  to extract the patch files.
+  - **extract**: This section contains details about how to extract the patch files.
     - **source**: Path of the Zip file to extract.
     - **destination**: Where to extract it.
   - **executable**: Mark files as executable.
     - **path**: Path to the file to be marked as executable.
   - **alert**: A message to display to the user
+  - **confirm**: A prompt to display to the user to confirm or abort the patch install.
   - **commands**: A list of shell commands to run after the patch has been installed or extracted.
-
+  - **version_check**: Check the local version vs. a remote version to see if a updated version is available.
+    - **local**: bash command to return a version number of the local version.
+    - **remote**: bash command to return a version number of the remote version.
 
 ## YAML Example
 
@@ -63,7 +65,7 @@ Below is an example of a YAML file containing multiple patches:
       - source: "https://github.com/zarquon-42/knulli-patches/raw/refs/heads/main/patches/rg40xx-boot-modded.img"
         destination: "/tmp/patch/"
     
-    - alert:
+    - confirm:
       - "About to overwrite the boot partition with rg40xx-boot-modded.img"
 
     - commands:
