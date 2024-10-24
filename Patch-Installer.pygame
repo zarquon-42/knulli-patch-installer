@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# Future TODO: Add options menu, can be used to toggle dry-run and log_level.
-
 import argparse
 import logging
 import pygame
