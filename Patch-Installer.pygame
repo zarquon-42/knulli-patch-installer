@@ -13,7 +13,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.3.2'
+VERSION = '1.3.3'
 
 # Constants for colors
 BACKGROUND_COLOR = (0, 0, 0)
@@ -126,28 +126,51 @@ def detect_board():
         logging.error(f"Error occurred retrieving board type {e=}, {type(e)=}")
         return None
 
-# Check if a patch is compatible with the detected board (with regex and specific boards)
-def is_patch_compatible(patch, board):
-    #compatibility = patch.get('compatibility', {})
-    try:
-        compatible_boards = patch['boards']
-    except:
+def board_check(requirements, board):
+    board_compatible = True
+
+    if 'boards' in requirements:
+        compatible_boards = requirements['boards']
+        board_compatible = False
+    else:
         compatible_boards = None
 
     # Return True if no boards are defined (no constraints on compatibility)
-    if not compatible_boards:
-        logging.debug(f"Board Check: Patch {patch['title']} does not contain any board compatibility information.  Assuming all boards OK")
-        return True
-
-    # Check each entry in boards (either a direct match or regex)
-    if board:
+    if compatible_boards and board:
+        # Check each entry in boards (either a direct match or regex)
         for entry in compatible_boards:
             if entry == board or re.match(entry, board):
-                logging.debug(f"Board Check: Patch {patch['title']}: Board ({board}) matches patch compatibility information ({entry})")
-                return True
+                logging.debug(f"Board Check: Board ({board}) matches patch compatibility information ({entry})")
+                board_compatible = True
 
-    logging.info(f"Skipping {patch['title']} - incompatible with {board} board")
-    return False
+        if not board_compatible:
+            logging.info(f"Skipping - incompatible with {board} board")
+    else:
+        logging.debug(f"Board Check: Patch does not contain any board compatibility information.  Assuming all boards OK")
+
+    return board_compatible
+
+
+# Check if a patch is compatible with the detected board (with regex and specific boards)
+def is_patch_compatible(patch, board):
+    #compatibility = patch.get('compatibility', {})
+    board_compatible = True
+    installer_compatible = True
+
+    if 'requirements' in patch:
+        requirements = patch['requirements']
+    else:
+        if "boards" in patch:
+            requirements = patch
+        else:
+            requirements = None
+
+    if requirements:
+        logging.info(f"Checking requirements for patch {patch['title']}")
+
+        board_compatible = board_check(requirements, board)
+    
+    return board_compatible and installer_compatible
 
 # List files from a GitHub repository
 def list_github_files(repo, path):
@@ -355,7 +378,7 @@ def run_command(command):
 
 # Process a specific patch
 def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interactive_mode=False):
-    if patch['title']:
+    if 'title' in patch and patch['title']:
         if not validate_yaml_only:
             logging.info(f"Processing patch: {patch['title']}")
     else:
