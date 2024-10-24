@@ -1,0 +1,18 @@
+- title: "multi line command test"
+  id: multi-line-command-test
+  description: "This patch is just a test."
+
+  tasks:
+    - confirm:
+      - "Test out multi-line command patches"
+
+    - commands:
+        - |
+          test_var1="Some Value"
+          test_var2="$(uname -a)"
+          echo "This is a test line 1 - $test_var1" > /tmp/test.log
+          echo "This is a test two" >> /tmp/test.log
+          echo "This is test three [$test_var2]" >> /tmp/test.log
+
+    - alert:
+      - "Ran the multiline test file.  See results at /tmp/test.log"
