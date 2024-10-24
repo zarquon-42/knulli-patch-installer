@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 # Future TODO: Add options menu, can be used to toggle dry-run and log_level.
-# Future TODO: Add support in tasks for confirmations on tasks which will display a message and prompt for the "A" key to continue or b to cancel..
 
 import argparse
 import logging
@@ -16,7 +15,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.3.1'
+VERSION = '1.3.2'
 
 # Constants for colors
 BACKGROUND_COLOR = (0, 0, 0)
@@ -249,21 +248,31 @@ def extract_zip(zip_path, destination_path, dry_run=False):
         return
 
     if zipfile.is_zipfile(zip_path):
-        # TODO: Make sure destination file exists
+        #if not os.path.isdir(destination_path):
+        #    return False, "Error: Extraction destination path does not exist."
+        
         logging.info(f"Extract ZIP: {zip_path} to {destination_path}")
 
-        #zipfile.ZipFile(zip_path, 'r').extractall(destination_path)
-        with zipfile.ZipFile(zip_path, 'r') as zf:
-            filesList = zf.namelist()   
-            for idx, file in enumerate(filesList):
-                progress = (idx / len(filesList)) * 100 + 0.001
-                show_message('Installing Patch...', f"Extracting: {os.path.basename(zip_path)}...", progress)
-                zf.extract(file, destination_path)
-            zf.close()
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zf:
+                filesList = zf.namelist()   
+                for idx, file in enumerate(filesList):
+                    progress = (idx / len(filesList)) * 100 + 0.001
+                    show_message('Installing Patch...', f"Extracting: {os.path.basename(zip_path)}...", progress)
+                    zf.extract(file, destination_path)
+                zf.close()
+        except Exception as e:
+            return_msg = f"Error occurred extracting {os.path.basename(zip_path)}.\n{e=}, {type(e)=}"
+            logging.critical(return_msg)
+            return False, return_msg
 
         os.remove(zip_path)  # Remove the zip file after extraction
     else:
-        logging.info(f"Invalid ZIP: {zip_path}")
+        return_msg = f"Error: Invalid ZIP: {zip_path}"
+        logging.info(return_msg)
+        return False, return_msg
+
+    return True, ""    
 
 # Function to download or copy/move files
 def download_file(source, destination_path, move=False, dry_run=False, message=None):
@@ -398,7 +407,9 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interac
             for file in task['extract']:
                 if file['source'] and file['destination']:
                     if not validate_yaml_only:
-                        extract_zip(file['source'], file['destination'], dry_run)
+                        success, result_msg = extract_zip(file['source'], file['destination'], dry_run)
+                        if not success:
+                            return False, result_msg
                 else:
                     result_msg = f"Invalid YAML file: Extract missing source or destination"
                     logging.error(result_msg)
@@ -411,6 +422,15 @@ def process_patch(patch, board, validate_yaml_only=False, dry_run=False, interac
                     show_dialog(alert_message, continue_only=True)
                 else:
                     logging.info(f"Non-interactive Mode Alert: {alert_message}")
+
+        if 'confirm' in task:
+            for confirm_message in task['confirm']:
+                if interactive_mode:
+                    logging.debug(f"Displaying Confirm: {confirm_message}")
+                    if not show_dialog(confirm_message):
+                        return False, "Patch install aborted."
+                else:
+                    logging.info(f"Non-interactive Mode Alert: {confirm_message}")
 
         # Handle marking files as executable
         if 'executable' in task:
