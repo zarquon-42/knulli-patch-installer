@@ -1,11 +1,15 @@
-#- title: "Update Patch Installer"
-#  id: patch_install_update
-#  description: "This allows you to update the Patch Installer to the latest version in github."
-#
-#  tasks:
-#    - files:
-#      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-patch-installer/refs/heads/main/Patch-Installer.pygame"
-#        destination: "./"
-#
-#   - alert:
-#      - "You will need to restart the Patch Installer for changes to take effect."
+- title: "Update Patch Installer"
+  id: patch_install_update
+  description: "This allows you to update the Patch Installer to the latest version in github."
+
+  requirements:
+    installer:
+      - "<1.3.0"
+
+  tasks:
+    - files:
+      - source: "https://raw.githubusercontent.com/zarquon-42/knulli-patch-installer/refs/heads/main/Patch-Installer.pygame"
+        destination: "./"
+
+    - alert:
+      - "You will need to restart the Patch Installer for changes to take effect."
