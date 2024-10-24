@@ -153,7 +153,7 @@ def os_check(requirements):
             
             # If no rules are supplied, return True
             if not rules:
-                loging.info(f"No Rules")
+                logging.debug(f"No Rules")
                 return True, ""
             
             # Loop through each rule and check if OS version satisfies the condition
@@ -175,6 +175,45 @@ def os_check(requirements):
     # If all rules are satisfied
     return True, ""
 
+def installer_check(requirements):
+    if "installer" in requirements:
+        rules = requirements['installer']
+
+        # Define the operator patterns
+        operators = {
+            '>': lambda x, y: x > y,
+            '>=': lambda x, y: x >= y,
+            '<': lambda x, y: x < y,
+            '<=': lambda x, y: x <= y,
+            '=': lambda x, y: x == y,
+            '!=': lambda x, y: x != y,
+        }
+        
+        # If no rules are supplied, return True
+        if not rules:
+            logging.info(f"No Rules")
+            return True, ""
+        
+        # Parse the application version
+        app_ver = version_tuple(VERSION)
+
+        # Loop through each rule and check if the app version satisfies the condition
+        for rule in rules:
+            # Default operator is "=" if not specified
+            match = re.match(r'(>=|<=|>|<|!=|=)?([\d\.]+)', rule)
+            if match:
+                operator, reference_version = match.groups()
+                operator = operator or '='  # Default to "=" if no operator is present
+
+                # Parse the reference version
+                ref_ver = version_tuple(reference_version)
+
+                # Apply the operator and check the condition
+                if not operators[operator](app_ver, ref_ver):
+                    return False, f"Patch does not match requirements: Patch installer {VERSION}{rule}"
+        
+    # If all rules are satisfied
+    return True, ""
 
 # Detect board type
 def detect_board():
@@ -250,6 +289,11 @@ def is_patch_compatible(patch):
             logging.info(f"Patch not compatible: {return_msg}")
             return False, return_msg
     
+        installer_compatible, return_msg = installer_check(requirements)
+        if not installer_compatible:
+            logging.info(f"Patch not compatible: {return_msg}")
+            return False, return_msg
+
     return True, ""
 
 # List files from a GitHub repository
