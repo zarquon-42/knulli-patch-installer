@@ -27,6 +27,10 @@
   requirements:
     boards: 
       - "rg40xx"
+    os:
+      - ">=20240721"
+      - "<2024915"
+
 
   tasks:
     - files:

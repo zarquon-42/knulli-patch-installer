@@ -8,6 +8,11 @@
     This Patch works with 2024-07-21 and will not work with newer versions.
 
     This Patch will download over 800MB of data so will take some time.
+  
+  requirements:
+    - os:
+      - "<=20240721"
+
   tasks:
     - confirm:
       - "WARNING: Only Proceed if running Knulli 20240721.\nPlease confirm you want to continue."
