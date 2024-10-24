@@ -15,7 +15,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 
 # Constants for colors
 BACKGROUND_COLOR = (0, 0, 0)
@@ -33,6 +33,11 @@ INSTRUCTIONS_HEIGHT = 40
 FONT_SIZE = 28
 PADDING = 10
 BORDER = 2
+
+PATCH_REPOSITORY = {
+    'repository': 'zarquon-42/knulli-patch-installer',
+    'path': 'patches'
+}
 
 PATCH_LIBRARY_PATH=f"{os.path.dirname(os.path.realpath(__file__))}/patches"
 if '--test-mode' in sys.argv:
@@ -255,7 +260,9 @@ def board_check(requirements):
             logging.warning(f"Unable to determine board type")
 
         if not board_compatible:
-            return_msg = f"Patch not compatible with {board}"
+            if not board:
+                board = "unknown"
+            return_msg = f"Patch not compatible with {board} board"
             logging.info(f"Skipping - incompatible with {board} board")
     else:
         logging.debug(f"Board Check: Patch does not contain any board compatibility information.  Assuming all boards OK")
@@ -264,7 +271,6 @@ def board_check(requirements):
 
 # Check if a patch is compatible with the requirements)
 def is_patch_compatible(patch):
-    #compatibility = patch.get('compatibility', {})
     board_compatible = True
     os_compatible = True
     installer_compatible = True
@@ -278,7 +284,7 @@ def is_patch_compatible(patch):
             requirements = None
 
     if requirements:
-        logging.info(f"Checking requirements for patch {patch['title']}")
+        logging.debug(f"Checking requirements for patch {patch['title']}")
         board_compatible, return_msg = board_check(requirements)
         if not board_compatible:
             return False, return_msg
@@ -382,7 +388,7 @@ def download_patch_files(message='Download patch definition files?', dry_run=Fal
                     os.remove(patch['file_path'])
 
         logging.debug(f"Downloading to {os.path.dirname(PATCH_LIBRARY_PATH)}/patches")
-        download_github_files('zarquon-42/knulli-patch-installer', 'patches', os.path.dirname(PATCH_LIBRARY_PATH), ".*|!.*\.yml|.*\.yaml", dry_run, 'Downloading patch definition files...')
+        download_github_files(PATCH_REPOSITORY['repository'], PATCH_REPOSITORY['path'], os.path.dirname(PATCH_LIBRARY_PATH), ".*|!.*\.yml|.*\.yaml", dry_run, 'Downloading patch definition files...')
         return True
     return False
 
