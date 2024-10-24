@@ -9,8 +9,8 @@
 
     This Patch will download over 800MB of data so will take some time.
   tasks:
-    - alert:
-      - "Only Proceed if running Knulli 20240721."
+    - confirm:
+      - "WARNING: Only Proceed if running Knulli 20240721.\nPlease confirm you want to continue."
 
     - commands:
         - "cp -n /usr/lib/python3.11/site-packages/configgen/utils/bezels.py /usr/lib/python3.11/site-packages/configgen/utils/bezels.py.bak"

@@ -32,8 +32,8 @@
       - source: "https://github.com/zarquon-42/knulli-patches/raw/refs/heads/main/patches/rg40xx-boot-modded.img"
         destination: "/tmp/patch/"
     
-    - alert:
-      - "About to overwrite the boot partition with rg40xx-boot-modded.img"
+    - confirm:
+      - "WARNING: About to overwrite the boot partition with rg40xx-boot-modded.img\nConfirm if you want to process."
 
     - commands:
       - "dd if=/tmp/patch/rg40xx-boot-modded.img of=/dev/mmcblk0p1"
@@ -73,8 +73,9 @@
       - source: "https://github.com/zarquon-42/knulli-patches/raw/refs/heads/main/patches/rg35xx-h-boot-modded.img"
         destination: "/tmp/patch/"
 
-    - alert:
-      - "About to overwrite the boot partition with rg35xx-h-boot-modded.img"
+    - confirm:
+      - "WARNING: About to overwrite the boot partition with rg35xx-boot-modded.img\nConfirm if you want to process."
+
 
     - commands:
       - "dd if=/tmp/patch/rg35xx-h-boot-modded.img of=/dev/mmcblk0p1"
