@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+"""
+Patch Installer for portable handheld devices running Knulli.
+This script reads YAML patch definition files, checks requirements, and allows users to install patches
+through a Pygame-based user interface. The script also handles patch file downloads, OS version checks, 
+and logging to a file or console.
+"""
+
 import argparse
 import logging
 import pygame
@@ -17,22 +24,22 @@ import zipfile
 
 VERSION = '1.4.1'
 
-# Constants for colors
-BACKGROUND_COLOR = (0, 0, 0)
-NORMAL_TEXT_COLOR = (150, 150, 150)
-BOLD_TEXT_COLOR = (255, 255, 255)
-HIGHLIGHT_COLOR = (68, 138, 255)
-TITLE_TEXT_COLOR = (255, 255, 255)
-TITLE_BG_COLOR = HIGHLIGHT_COLOR
+# UI color settings
+BACKGROUND_COLOR = (0, 0, 0)         # Black background
+NORMAL_TEXT_COLOR = (150, 150, 150)  # Gray for normal text
+BOLD_TEXT_COLOR = (255, 255, 255)    # White for bold/selected text
+HIGHLIGHT_COLOR = (68, 138, 255)     # Blue for highlighted selections
+TITLE_TEXT_COLOR = (255, 255, 255)   # White for Title Text
+TITLE_BG_COLOR = HIGHLIGHT_COLOR     # Use the same color as for highlighting for Title Background
 SELECTION_BG_COLOR = NORMAL_TEXT_COLOR
 SELECTION_TEXT_COLOR = BACKGROUND_COLOR
 
-# Constants for screen layout
-TITLE_HEIGHT = 40
-INSTRUCTIONS_HEIGHT = 40
-FONT_SIZE = 28
-PADDING = 10
-BORDER = 2
+# UI layout constants
+TITLE_HEIGHT = 40  # Height of the title bar
+INSTRUCTIONS_HEIGHT = 40  # Height for instructions displayed on screen
+FONT_SIZE = 28  # Base font size for text display
+PADDING = 10  # Padding around UI elements
+BORDER = 2  # Border width for highlighted items
 
 PATCH_REPOSITORY = {
     'repository': 'zarquon-42/knulli-patch-installer',
@@ -60,7 +67,13 @@ log_levels = {
 }
 
 def initialize_logging(log_file, log_level=2):
-    # Setup logging
+    """
+    Initializes the logging system. Logs messages to both a log file and the console
+    depending on the provided log level. Log levels:
+    0: CRITICAL, 1: WARNING, 2: INFO, 3: DEBUG
+    """
+
+    # Add a console handler for real-time log output to the console at the specified level.
     logging.basicConfig(
         filename=log_file,
         filemode='a',  # Append to the file
@@ -78,6 +91,7 @@ def initialize_logging(log_file, log_level=2):
     logging.debug(f"Logging to file: {args.log_file}")
 
 def adjust_logging(log_level=2):
+    # Adjusts the logging level on the fly based on log_level.
     logging.setLevel(log_levels[log_level])
 
 def is_network_available(host="8.8.8.8", port=53, timeout=3):
@@ -90,7 +104,7 @@ def is_network_available(host="8.8.8.8", port=53, timeout=3):
     :return: True if the network is available, False otherwise.
     """
     try:
-        # Attempt to create a connection to the host with the given port and timeout
+        # Attempts a socket connection to check for network availability. Default connection to Google DNS.
         socket.create_connection((host, port), timeout=timeout)
         return True
     except OSError as e:
@@ -101,6 +115,13 @@ def is_network_available(host="8.8.8.8", port=53, timeout=3):
         return False
 
 def version_tuple(version):
+    """
+    Converts a version string to a tuple for easy comparison (e.g., "1.4.1" -> (1, 4, 1)).
+    Non-integer elements are assigned a high default to avoid incorrect comparisons.
+    """
+
+    # Helper function to replace non-integer values with a high number.
+    # For example: 1.4.0b3 -> 1.4.9999
     def myint(a):
         if a.isdigit():
             return int(a)
@@ -115,6 +136,10 @@ def version_tuple(version):
     return (9999, 9999, 9999)
 
 def run_command(command):
+    """
+    Executes a shell command, capturing both stdout and stderr. 
+    Logs output or errors based on the command result. If an error occurs, logs the critical failure.
+    """
     try:
         result = subprocess.run(
             command,
@@ -132,6 +157,10 @@ def run_command(command):
     return result
 
 def detect_os():
+    """
+    Detects the OS version by running the 'batocera-version' command.
+    The version is parsed into a numeric format to allow comparisons.
+    """
     try:
         result = run_command("batocera-version | sed 's/.*\\([0-9][0-9][0-9][0-9]\\).\\([0-9][0-9]\\).\\([0-9][0-9]\\) .*/\\1\\2\\3/'")
         if result:
@@ -142,6 +171,11 @@ def detect_os():
         return None
 
 def os_check(requirements):
+    """
+    Checks if the OS version meets the specified requirements.
+    Requirements are provided as a dictionary of comparison rules with operators (>, >=, <, <=, =, !=).
+    Returns True if all requirements are met, False otherwise.
+    """
     if "os" in requirements:
         os_version = detect_os()
         if os_version:
