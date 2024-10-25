@@ -38,6 +38,7 @@ PATCH_REPOSITORY = {
     'repository': 'zarquon-42/knulli-patch-installer',
     'path': 'patches'
 }
+SCRIPT_SOURCE_URL = f"https://raw.githubusercontent.com/{PATCH_REPOSITORY['repository']}/refs/heads/main/Patch-Installer.pygame"
 
 PATCH_LIBRARY_PATH=f"{os.path.dirname(os.path.realpath(__file__))}/patches"
 if '--test-mode' in sys.argv:
@@ -1141,20 +1142,18 @@ def update_check():
                 return line.split("=")[1].strip().replace('"', '').replace("'", "")
         return None
 
-    script_url = f"https://raw.githubusercontent.com/{PATCH_REPOSITORY['repository']}/refs/heads/main/Patch-Installer.pygame"
-
     if is_network_available:
         script_path = os.path.realpath(__file__)
         logging.info(f"{script_path} v{VERSION}")
 
-        github_version = get_script_version_from_github(script_url)
+        github_version = get_script_version_from_github(SCRIPT_SOURCE_URL)
         if github_version and version_tuple(github_version) > version_tuple(VERSION):
             logging.info(f"Newer version ({github_version}) found.")
             if (g_interactive_mode and show_dialog(f"New version {github_version} available.\nUpdate now?",button_confirm="Update", button_cancel="Skip")) or (not g_interactive_mode):
                 logging.info(f"Updating to version {github_version}...")
 
                 try:
-                    response = requests.get(script_url, timeout=10)
+                    response = requests.get(SCRIPT_SOURCE_URL, timeout=10)
                     if response.status_code == 200:
                         with open(script_path, 'wb') as file:
                             file.write(response.content)
