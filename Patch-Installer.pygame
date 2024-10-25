@@ -1141,7 +1141,7 @@ def update_check():
                 return line.split("=")[1].strip().replace('"', '').replace("'", "")
         return None
 
-    script_url = "https://raw.githubusercontent.com/zarquon-42/knulli-patch-installer/refs/heads/main/Patch-Installer.pygame"
+    script_url = f"https://raw.githubusercontent.com/{PATCH_REPOSITORY['repository']}/refs/heads/main/Patch-Installer.pygame"
 
     if is_network_available:
         script_path = os.path.realpath(__file__)
