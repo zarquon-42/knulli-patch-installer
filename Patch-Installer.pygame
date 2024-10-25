@@ -22,7 +22,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.4.1'
+VERSION = '1.4.2'
 
 # UI color settings
 BACKGROUND_COLOR = (0, 0, 0)         # Black background
@@ -162,13 +162,16 @@ def detect_os():
     The version is parsed into a numeric format to allow comparisons.
     """
     try:
-        result = run_command("batocera-version | sed 's/.*\\([0-9][0-9][0-9][0-9]\\).\\([0-9][0-9]\\).\\([0-9][0-9]\\) .*/\\1\\2\\3/'")
+        result = run_command("batocera-version 2>/dev/null | sed 's/.*\\([0-9][0-9][0-9][0-9]\\).\\([0-9][0-9]\\).\\([0-9][0-9]\\) .*/\\1\\2\\3/'")
         if result:
             version=result.stdout.strip()
-
-        return version
     except:
-        return None
+        version=None
+
+    if not version and '--test-mode' in sys.argv:
+        version="20240721"
+
+    return version
 
 def os_check(requirements):
     """
@@ -257,20 +260,22 @@ def installer_check(requirements):
 
 # Detect board type
 def detect_board():
+    mocked = ""
     try:
-        result = subprocess.run(
-            ["bash", "-c", "batocera-info | grep '^Board: ' | sed -e 's/^Board: //' | tr '[:upper:]' '[:lower:]'"],
-            capture_output=True, text=True, check=True
-        )
-        board = result.stdout.strip()
-        logging.debug(f"Detected board: {board}")
-        return board
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to detect board type: {e}")
-        return None
+        result = run_command("batocera-info 2>/dev/null | grep '^Board: ' | sed -e 's/^Board: //' | tr '[:upper:]' '[:lower:]'")
+        if result:
+            board = result.stdout.strip()
     except Exception as e:
         logging.error(f"Error occurred retrieving board type {e=}, {type(e)=}")
-        return None
+        board = None
+
+    if not board  and '--test-mode' in sys.argv:
+        board = "rg40xx-v"
+        mocked = " mocked"
+
+    logging.debug(f"Detected board: {board}{mocked}")
+
+    return board
 
 def board_check(requirements):
     board_compatible = True
