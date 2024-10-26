@@ -22,7 +22,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.4.2'
+VERSION = '1.4.3'
 
 # UI color settings
 BACKGROUND_COLOR = (0, 0, 0)         # Black background
@@ -156,20 +156,32 @@ def run_command(command):
 
     return result
 
-def detect_os():
+def detect_os(return_raw=False):
     """
     Detects the OS version by running the 'batocera-version' command.
     The version is parsed into a numeric format to allow comparisons.
     """
+    mocked = ""
     try:
-        result = run_command("batocera-version 2>/dev/null | sed 's/.*\\([0-9][0-9][0-9][0-9]\\).\\([0-9][0-9]\\).\\([0-9][0-9]\\) .*/\\1\\2\\3/'")
+        if return_raw:
+            cmd = "batocera-version 2>/dev/null"
+        else:
+            cmd = "batocera-version 2>/dev/null | sed 's/.*\\([0-9][0-9][0-9][0-9]\\).\\([0-9][0-9]\\).\\([0-9][0-9]\\) .*/\\1\\2\\3/'"
+        
+        result = run_command(cmd)
         if result:
             version=result.stdout.strip()
     except:
-        version=None
+        version = None
 
     if not version and '--test-mode' in sys.argv:
-        version="20240721"
+        if return_raw:
+            version = "mocked OS 20240721"
+        else:
+            version = "20240721"
+        mocked = " mocked"
+
+    logging.debug(f"Detected OS: {version}{mocked}")
 
     return version
 
@@ -1014,6 +1026,7 @@ def main_menu(log_level=2, dry_run=True):
                     logging.info(f"Log Level: {log_level}")
                     logging.getLogger().setLevel(logging.DEBUG)
                     logging.debug("Turned on debug logging")
+                    show_dialog(f"Debug Logging Activated:\n\nBoard: {detect_board()}\nOS: {detect_os(return_raw=True)}\nInstaller: {VERSION}", continue_only=True)
                 elif event.key == pygame.K_y:  # Reload patch definition files
                     download_patch_files()
                     patch_list = list_patches(PATCH_LIBRARY_PATH, False, skip_invalid=skip_invalid)
