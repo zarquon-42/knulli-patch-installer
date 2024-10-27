@@ -29,8 +29,7 @@
       - "rg40xx"
     os:
       - ">=20240721"
-      - "<2024915"
-
+      - "<20240915"
 
   tasks:
     - files:
@@ -73,6 +72,9 @@
   requirements:
     boards: 
       - "rg35xx-h"
+    os:
+      - ">=20240721"
+      - "<20240915"
 
   tasks:
     - files:
