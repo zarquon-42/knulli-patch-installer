@@ -22,7 +22,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.4.4'
+VERSION = '1.4.5'
 
 # UI color settings
 BACKGROUND_COLOR = (0, 0, 0)         # Black background
@@ -332,7 +332,8 @@ def board_check(requirements):
 
 def get_disk_info(disk="/boot|/userdata|/media/"):
     try:
-        disk_info = run_command(f"df -hT | grep -E '{disk}'").stdout
+        result = run_command(f"df -hT | grep -E '{disk}'")
+        disk_info = f"\n{result.stdout}"
     except:
         disk_info = None
     if (not disk_info) or disk_info == "":           
@@ -1048,7 +1049,7 @@ def main_menu(args, log_level=2):
                     logging.getLogger().setLevel(logging.DEBUG)
                     logging.debug("Turned on debug logging")
                     disk_info = get_disk_info()
-                    show_dialog(f"Debug Logging Activated:\n\nBoard: {detect_board()}\nOS: {detect_os(return_raw=True)}\nInstaller: {VERSION}\nDisk Info:\n{disk_info}", continue_only=True)
+                    show_dialog("Debug Logging Activated",details=f"Patch Installer: {VERSION}\nBoard: {detect_board()}\nOS: {detect_os(return_raw=True)}\nDisk Info: {disk_info}", continue_only=True)
                 elif event.key == pygame.K_y:  # Reload patch definition files
                     download_patch_files()
                     patch_list = list_patches(PATCH_LIBRARY_PATH, False, skip_invalid=skip_invalid)
@@ -1131,7 +1132,7 @@ def show_message(message, step = None, progress = None, log_message = None):
 
         pygame.display.flip()
 
-def show_dialog(dialog_msg, prompt_msg = None, continue_only = False, button_confirm=None, button_cancel="cancel"):
+def show_dialog(dialog_msg, details = None, prompt_msg = None, continue_only = False, button_confirm=None, button_cancel="cancel"):
     if not g_interactive_mode:
         logging.log(f"Non-interactive show_dialog: {dialog_msg}")
         logging.debug(f"Non-interactive show_dialog: Returning: {continue_only}")
@@ -1140,21 +1141,42 @@ def show_dialog(dialog_msg, prompt_msg = None, continue_only = False, button_con
     if not button_confirm:
         button_confirm = 'continue' if continue_only else 'confirm'
 
-    wrapped_message = wrap_text(dialog_msg, g_normal_font, g_screen_width * 0.80)  # Wrap text to fit screen g_screen_width
+    dialog_message = wrap_text(dialog_msg, g_normal_font, g_screen_width * 0.80)  # Wrap text to fit screen g_screen_width
+    if details:
+        details_message = wrap_text(details, g_normal_font, g_screen_width * 0.90)
 
     total_lines = 0
     total_height = 0
-    for i, line in enumerate(wrapped_message):
-        total_height = total_height + g_normal_font.render(line, True, BOLD_TEXT_COLOR).get_height()
-        total_lines = total_lines + 1
-    total_height = total_height + g_normal_font.render(line, True, BOLD_TEXT_COLOR).get_height()*2
+    for i, line in enumerate(dialog_message):
+        total_height += g_normal_font.render(line, True, BOLD_TEXT_COLOR).get_height()
+        total_lines += 1
+    if details:
+        for i, line in enumerate(details_message):
+            total_height += g_details_font.render(line, True, BOLD_TEXT_COLOR).get_height() * 0.75
+            total_lines += 1
+    total_height = total_height + g_normal_font.render(line, True, BOLD_TEXT_COLOR).get_height() * 2
     total_lines = total_lines + 2
 
     while True:
         g_screen.fill(BACKGROUND_COLOR)
-        for i, line in enumerate(wrapped_message):
+
+        text_top = (g_screen_height - total_height) // 2
+
+        msg_height = 0
+        for i, line in enumerate(dialog_message):
             message_text = g_normal_font.render(line, True, BOLD_TEXT_COLOR)
-            g_screen.blit(message_text, (g_screen_width // 2 - message_text.get_width() // 2, (g_screen_height - total_height) // 2 + i * message_text.get_height()))
+            g_screen.blit(message_text, (g_screen_width // 2 - message_text.get_width() // 2, text_top + i * message_text.get_height()))
+            msg_height += message_text.get_height()
+
+        text_top += msg_height
+
+        msg_height = 0
+        if details:
+            for i, line in enumerate(details_message):
+                message_text = g_details_font.render(line, True, NORMAL_TEXT_COLOR)
+                g_screen.blit(message_text, (g_screen_width * 0.05, text_top + i * message_text.get_height() * 0.75))
+                msg_height += message_text.get_height() * 0.75
+            text_top += msg_height
 
         if not prompt_msg:
             if continue_only:
@@ -1163,7 +1185,7 @@ def show_dialog(dialog_msg, prompt_msg = None, continue_only = False, button_con
                 prompt_msg = f"Press A to {button_confirm}, B to {button_cancel}"
 
         prompt_text = g_normal_font.render(prompt_msg, True, HIGHLIGHT_COLOR)
-        g_screen.blit(prompt_text, (g_screen_width // 2 - prompt_text.get_width() // 2, (g_screen_height - total_height)  // 2 + total_lines * message_text.get_height()))
+        g_screen.blit(prompt_text, (g_screen_width // 2 - prompt_text.get_width() // 2, text_top + message_text.get_height()))
 
         pygame.display.flip()
 
@@ -1285,6 +1307,7 @@ if __name__ == '__main__':
 
         # Fonts
         g_normal_font = pygame.font.SysFont(None, FONT_SIZE)
+        g_details_font = pygame.font.SysFont("monospace", 20)
         g_instruction_font = pygame.font.SysFont(None, 24)
         g_title_font = pygame.font.SysFont(None, 48)
 
