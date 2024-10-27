@@ -22,7 +22,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.4.3'
+VERSION = '1.4.4'
 
 # UI color settings
 BACKGROUND_COLOR = (0, 0, 0)         # Black background
@@ -95,7 +95,6 @@ def adjust_logging(log_level=2):
     logging.setLevel(log_levels[log_level])
 
 def trim_logfile(log_file):
-    args.log_file()
     try:
         run_command(f"tail -200 {log_file} > /tmp/patch-installer.log && rm {log_file} && mv /tmp/patch-installer.log {log_file}")
     except:
@@ -181,12 +180,15 @@ def detect_os(return_raw=False):
     except:
         version = None
 
-    if not version and '--test-mode' in sys.argv:
-        if return_raw:
-            version = "mocked OS 20240721"
+    if not version:
+        if '--test-mode' in sys.argv:
+            if return_raw:
+                version = "mocked OS 20240721"
+            else:
+                version = "20240721"
+            mocked = " mocked"
         else:
-            version = "20240721"
-        mocked = " mocked"
+            version = "0"
 
     logging.debug(f"Detected OS: {version}{mocked}")
 
@@ -327,6 +329,16 @@ def board_check(requirements):
         logging.debug(f"Board Check: Patch does not contain any board compatibility information.  Assuming all boards OK")
 
     return board_compatible, return_msg
+
+def get_disk_info(disk="/boot|/userdata|/media/"):
+    try:
+        disk_info = run_command(f"df -hT | grep -E '{disk}'").stdout
+    except:
+        disk_info = None
+    if (not disk_info) or disk_info == "":           
+        disk_info = "Unavailable"
+
+    return disk_info
 
 # Check if a patch is compatible with the requirements)
 def is_patch_compatible(patch):
@@ -1035,7 +1047,8 @@ def main_menu(args, log_level=2):
                     logging.info(f"Log Level: {log_level}")
                     logging.getLogger().setLevel(logging.DEBUG)
                     logging.debug("Turned on debug logging")
-                    show_dialog(f"Debug Logging Activated:\n\nBoard: {detect_board()}\nOS: {detect_os(return_raw=True)}\nInstaller: {VERSION}", continue_only=True)
+                    disk_info = get_disk_info()
+                    show_dialog(f"Debug Logging Activated:\n\nBoard: {detect_board()}\nOS: {detect_os(return_raw=True)}\nInstaller: {VERSION}\nDisk Info:\n{disk_info}", continue_only=True)
                 elif event.key == pygame.K_y:  # Reload patch definition files
                     download_patch_files()
                     patch_list = list_patches(PATCH_LIBRARY_PATH, False, skip_invalid=skip_invalid)
