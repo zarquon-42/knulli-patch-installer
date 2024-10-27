@@ -88,11 +88,18 @@ def initialize_logging(log_file, log_level=2):
     logging.getLogger().addHandler(console)
 
     logging.debug(f"Log initialized at level: {log_levels[log_level]}")
-    logging.debug(f"Logging to file: {args.log_file}")
+    logging.debug(f"Logging to file: {log_file}")
 
 def adjust_logging(log_level=2):
     # Adjusts the logging level on the fly based on log_level.
     logging.setLevel(log_levels[log_level])
+
+def trim_logfile(log_file):
+    args.log_file()
+    try:
+        run_command(f"tail -200 {log_file} > /tmp/patch-installer.log && rm {log_file} && mv /tmp/patch-installer.log {log_file}")
+    except:
+        logging.warning("Problem trimming log file.\n{e=}, {type(e)=}")
 
 def is_network_available(host="8.8.8.8", port=53, timeout=3):
     """
@@ -936,7 +943,8 @@ def patch_migration_check(patch_list_personal):
                 patch_list = patch_list.extend(patch_list_personal)
                 patch_list = deduplicate_patches(patch_list)
 
-def main_menu(log_level=2, dry_run=True):
+def main_menu(args, log_level=2):
+    dry_run = args.dry_run
     selected_patch = 0
     description_pos = 0
     current_list = 0
@@ -1003,6 +1011,7 @@ def main_menu(log_level=2, dry_run=True):
                     if not run:
                         logging.info("Exiting")
                         pygame.quit()
+                        trim_logfile(args.log_file)
                         sys.exit()
 
                 elif event.key == pygame.K_DOWN or f"{pygame.key.name(event.key)}" == "[6]":
@@ -1240,6 +1249,7 @@ if __name__ == '__main__':
             process_patches(args.patch_file, args.patch_id, dry_run=args.dry_run)
         else:
             logging.critical(f"Patch Error: There is a problem, check the YAML file before retrying.")
+            trim_logfile(args.log_file)
             exit(1)
     else:
         g_interactive_mode=True
@@ -1267,4 +1277,6 @@ if __name__ == '__main__':
 
         if update_check():
             logging.info(f"Starting Patch Installer...")
-            main_menu(log_level, args.dry_run)
+            main_menu(args, log_level)
+
+    trim_logfile(args.log_file)
