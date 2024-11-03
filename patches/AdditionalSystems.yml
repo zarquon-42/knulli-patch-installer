@@ -1,0 +1,42 @@
+- title: "Add additional systems"
+  id: add_additional_systems_patch
+  description: >
+    This is adds the following systems to your knulli install.
+
+    This follows the technique from Phanturian.
+
+  tasks:
+    - files:
+      - source: "https://github.com/zarquon-42/knulli-patches"
+        destination: "/userdata/system/configs/emulationstation"
+        github_path: "patches/add-systems/systems"
+        ignore: ".*.md|*.sh|.gitignore|!*.cfg"
+
+    - commands:
+        - "mkdir -p /userdata/roms/arcade"
+        - "mkdir -p /userdata/roms/cps1"
+        - "mkdir -p /userdata/roms/cps2"
+        - "mkdir -p /userdata/roms/cps3"
+        - "mkdir -p /userdata/roms/genesis"
+        - "mkdir -p /userdata/roms/megadrivejp"
+        - "mkdir -p /userdata/roms/sfc"
+        - "mkdir -p /userdata/roms/tg16"
+        - "mkdir -p /userdata/roms/tg16cd"
+        - "batocera-settings-set arcade.core fbneo"
+        - "batocera-settings-set arcade.emulator libretro"
+        - "batocera-settings-set cps1.core fbneo"
+        - "batocera-settings-set cps1.emulator libretro"
+        - "batocera-settings-set cps2.core fbneo"
+        - "batocera-settings-set cps2.emulator libretro"
+        - "batocera-settings-set cps3.core fbneo"
+        - "batocera-settings-set cps3.emulator libretro"
+        - "batocera-settings-set genesis.core genesisplusgx"
+        - "batocera-settings-set genesis.emulator libretro"
+        - "batocera-settings-set megadrivejp.core genesisplusgx"
+        - "batocera-settings-set megadrivejp.emulator libretro"
+        - "batocera-settings-set sfc.core snes9x"
+        - "batocera-settings-set sfc.emulator libretro"
+        - "batocera-settings-set tg16.core pce_fast"
+        - "batocera-settings-set tg16.emulator libretro"
+        - "batocera-settings-set tg16cd.core pce_fast"
+        - "batocera-settings-set tg16cd.emulator libretro"
