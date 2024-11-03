@@ -8,11 +8,12 @@
   tasks:
     - files:
       - source: "https://github.com/zarquon-42/knulli-patches"
-        destination: "/userdata/system/configs/emulationstation"
+        destination: "/tmp"
         github_path: "patches/add-systems/systems"
-        ignore: ".*.md|*.sh|.gitignore|!*.cfg"
+        ignore: ".*.md|.*.sh|.gitignore|!.*.cfg"
 
     - commands:
+        - "mv /tmp/patches/add-systems/systems/*.cfg /userdata/system/configs/emulationstation/"
         - "mkdir -p /userdata/roms/arcade"
         - "mkdir -p /userdata/roms/cps1"
         - "mkdir -p /userdata/roms/cps2"
