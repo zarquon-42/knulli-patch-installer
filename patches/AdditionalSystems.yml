@@ -3,6 +3,16 @@
   description: >
     This is adds the following systems to your knulli install.
 
+    * Arcade
+    * CPS I
+    * CPS II
+    * CPS III
+    * Sega Genesis
+    * Sega Megadrive Japan
+    * Super Famicom
+    * Turbo Graphics 16
+    * Turbo Graphics 16 CD
+
     This follows the technique from Phanturian.
 
   tasks:
