@@ -953,7 +953,7 @@ def patch_migration_check(patch_list_personal):
             if len(patch_list) == 0:
                 patch_list = patch_list_personal
             else:
-                patch_list = patch_list.extend(patch_list_personal)
+                patch_list.extend(patch_list_personal)
                 patch_list = deduplicate_patches(patch_list)
 
 def main_menu(args, log_level=2):
@@ -1058,8 +1058,10 @@ def main_menu(args, log_level=2):
                         if len(patch_list) == 0:
                             patch_list = patch_list_personal
                         else:
-                            patch_list = patch_list.extend(patch_list_personal)
+                            patch_list.extend(patch_list_personal)
                             patch_list = deduplicate_patches(patch_list)
+                    if selected_patch >= len(patch_list):
+                        selected_patch = len(patch_list) - 1
                 elif event.key == pygame.K_a:  # Confirm installation
                     installing_patch = confirm_install(patch_list[selected_patch], dry_run)
                 else:
@@ -1145,6 +1147,7 @@ def show_dialog(dialog_msg, details = None, prompt_msg = None, continue_only = F
     if details:
         details_message = wrap_text(details, g_normal_font, g_screen_width * 0.90)
 
+    DETAILS_SCALE = 0.66
     total_lines = 0
     total_height = 0
     for i, line in enumerate(dialog_message):
@@ -1152,7 +1155,8 @@ def show_dialog(dialog_msg, details = None, prompt_msg = None, continue_only = F
         total_lines += 1
     if details:
         for i, line in enumerate(details_message):
-            total_height += g_details_font.render(line, True, BOLD_TEXT_COLOR).get_height() * 0.75
+            total_height += g_details_font.render(line, True, BOLD_TEXT_COLOR).get_height() * DETAILS_SCALE
+
             total_lines += 1
     total_height = total_height + g_normal_font.render(line, True, BOLD_TEXT_COLOR).get_height() * 2
     total_lines = total_lines + 2
@@ -1174,8 +1178,8 @@ def show_dialog(dialog_msg, details = None, prompt_msg = None, continue_only = F
         if details:
             for i, line in enumerate(details_message):
                 message_text = g_details_font.render(line, True, NORMAL_TEXT_COLOR)
-                g_screen.blit(message_text, (g_screen_width * 0.05, text_top + i * message_text.get_height() * 0.75))
-                msg_height += message_text.get_height() * 0.75
+                g_screen.blit(message_text, (g_screen_width * 0.05, text_top + i * message_text.get_height() * DETAILS_SCALE))
+                msg_height += message_text.get_height() * DETAILS_SCALE
             text_top += msg_height
 
         if not prompt_msg:
