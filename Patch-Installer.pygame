@@ -22,7 +22,7 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.4.6'
+VERSION = '1.4.7'
 
 # UI color settings
 BACKGROUND_COLOR = (0, 0, 0)         # Black background
@@ -1001,7 +1001,7 @@ def main_menu(args, log_level=2):
             dry_run_instruction = ''
 
         # Bottom bar with instructions
-        draw_text(f"Press A to install, B to exit, Arrows to navigate{dry_run_instruction}", g_instruction_font, HIGHLIGHT_COLOR, g_screen, PADDING, g_screen_height - INSTRUCTIONS_HEIGHT)
+        draw_text(f"Press A to install, B to exit, Y to download patch definitions, ARROWS to navigate{dry_run_instruction}", g_instruction_font, HIGHLIGHT_COLOR, g_screen, PADDING, g_screen_height - INSTRUCTIONS_HEIGHT)
 
 
         # Display patch list on the left half of the screen
