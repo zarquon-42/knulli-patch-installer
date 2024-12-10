@@ -22,13 +22,14 @@ import requests
 import socket
 import zipfile
 
-VERSION = '1.4.6'
+VERSION = '1.4.7'
 
 # UI color settings
 BACKGROUND_COLOR = (0, 0, 0)         # Black background
 NORMAL_TEXT_COLOR = (150, 150, 150)  # Gray for normal text
 BOLD_TEXT_COLOR = (255, 255, 255)    # White for bold/selected text
 HIGHLIGHT_COLOR = (68, 138, 255)     # Blue for highlighted selections
+HIGHLIGHT_COLOR_ALT = (255, 255, 68) # Yellow for alternate highlighted selections
 TITLE_TEXT_COLOR = (255, 255, 255)   # White for Title Text
 TITLE_BG_COLOR = HIGHLIGHT_COLOR     # Use the same color as for highlighting for Title Background
 SELECTION_BG_COLOR = NORMAL_TEXT_COLOR
@@ -665,7 +666,7 @@ def process_patch(patch, validate_yaml_only=False, dry_run=False, interactive_mo
                             version_remote=result.stdout.strip()
                         if version_remote and len(version_remote) > 0:
                             if version_tuple(version_local) == version_tuple(version_remote):
-                                logging.debug("Versions Check Matched {version_local}")
+                                logging.debug(f"Versions Check Matched {version_local}")
                                 if show_dialog(f"Version up-to-date ({version_remote})\n\nDo you want to install anyways?", button_confirm="install"):
                                     continue
                                 else:
@@ -996,12 +997,12 @@ def main_menu(args, log_level=2):
         g_screen.blit(title_text, (g_screen_width // 2 - title_text.get_width() // 2, PADDING))
 
         if dry_run:
-            dry_run_instruction = '                      [ Dry Run Mode On ]'
+            dry_run_color = HIGHLIGHT_COLOR_ALT
         else:
-            dry_run_instruction = ''
+            dry_run_color = HIGHLIGHT_COLOR
 
         # Bottom bar with instructions
-        draw_text(f"Press A to install, B to exit, Arrows to navigate{dry_run_instruction}", g_instruction_font, HIGHLIGHT_COLOR, g_screen, PADDING, g_screen_height - INSTRUCTIONS_HEIGHT)
+        draw_text(f"Press A to install, B to exit, Y to refresh patch definitions, Arrows to navigate", g_instruction_font, dry_run_color, g_screen, PADDING, g_screen_height - INSTRUCTIONS_HEIGHT)
 
 
         # Display patch list on the left half of the screen
