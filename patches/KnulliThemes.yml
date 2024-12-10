@@ -10,8 +10,8 @@
         
   tasks:
     - version_check:
-      - local: "(grep 'version:' /userdata/themes/es-theme-knulli/theme.xml 2>/dev/null || echo 'version: 0.0.0') | sed 's/version:[[:space:]]*\\(.*\\)/\\1/'"
-        remote: "curl -sL https://raw.githubusercontent.com/symbuzzer/es-theme-knulli/main/theme.xml | grep 'version:' | sed 's/version:[[:space:]]*\\(.*\\)/\\1/'"
+      - local: "(grep -e 'version:' -e '<v.themeVersion>' /userdata/themes/es-theme-knulli/theme.xml 2>/dev/null || echo 'version: 0.0.0') | sed -e 's/version:[[:space:]]*\\(.*\\)/\\1/' -e 's/<v.themeVersion>\\(.*\\)<\\/v.themeVersion>/\\1/' -e 's/[[:space:]]*//g'"
+        remote: "curl -sL https://raw.githubusercontent.com/symbuzzer/es-theme-knulli/main/theme.xml | grep -e 'version:' -e '<v.themeVersion>' | sed -e 's/version:[[:space:]]*\\(.*\\)/\\1/' -e 's/<v.themeVersion>\\(.*\\)<\\/v.themeVersion>/\\1/' -e 's/[[:space:]]*//g'"
 
     - files:
       - source: "https://github.com/symbuzzer/es-theme-knulli/releases/latest/download/es-theme-knulli.zip"
